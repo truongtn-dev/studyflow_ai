@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/sf_button.dart';
 import '../../widgets/sf_card.dart';
+import '../ai/ai_hub_screen.dart';
 
 /// Dashboard – Hữu Duy (placeholder có UI sẵn để team mở rộng)
 class DashboardScreen extends StatelessWidget {
@@ -79,6 +81,17 @@ class DashboardScreen extends StatelessWidget {
               title: 'Chưa có deadline',
               subtitle: 'Thêm task để theo dõi tiến độ học tập',
               icon: Icons.task_alt_rounded,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SfButton(
+            label: 'Hỏi AI Coach',
+            icon: Icons.auto_awesome,
+            variant: SfButtonVariant.outlined,
+            expand: true,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AiHubScreen()),
             ),
           ),
         ],

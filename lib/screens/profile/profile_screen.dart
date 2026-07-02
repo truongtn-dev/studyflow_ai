@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/theme_provider.dart';
+import '../../providers/ai_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/sf_button.dart';
 import '../../widgets/sf_card.dart';
+import '../ai/ai_settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -51,6 +53,20 @@ class ProfileScreen extends StatelessWidget {
               subtitle: const Text('Dark mode'),
               value: themeProvider.isDark,
               onChanged: (_) => themeProvider.toggle(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SfCard(
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.auto_awesome, color: AppColors.primary),
+              title: const Text('AI Quota & Settings'),
+              subtitle: Text('Còn ${context.watch<AiProvider>().remainingQuota} lượt hôm nay'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AiSettingsScreen()),
+              ),
             ),
           ),
           const SizedBox(height: 16),

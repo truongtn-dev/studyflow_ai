@@ -15,7 +15,9 @@ dependencies:
   shared_preferences: ^2.5.3
   provider: ^6.1.0
   http: ^1.2.0
-  google_generative_ai: ^0.4.0
+  flutter_markdown: ^0.7.6+2
+  flutter_highlight: ^0.7.0
+  highlight: ^0.7.0
   flutter_local_notifications: ^18.0.0
   google_fonts: ^6.2.1
   fl_chart: ^0.70.0

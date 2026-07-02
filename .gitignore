@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local API keys — never commit
+secrets.json
+secrets.local.ps1
