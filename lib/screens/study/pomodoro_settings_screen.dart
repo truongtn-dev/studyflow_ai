@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../../theme/app_colors.dart';
 class PomodoroSettingsScreen extends StatefulWidget {
   const PomodoroSettingsScreen({super.key});
 
@@ -21,11 +21,13 @@ class _PomodoroSettingsScreenState extends State<PomodoroSettingsScreen> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _focusMinutes = prefs.getInt('focus_minutes') ?? 25;
-      _breakMinutes = prefs.getInt('break_minutes') ?? 5;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _focusMinutes = prefs.getInt('focus_minutes') ?? 25;
+        _breakMinutes = prefs.getInt('break_minutes') ?? 5;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -37,12 +39,17 @@ class _PomodoroSettingsScreenState extends State<PomodoroSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+    }
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text("Cài đặt Pomodoro", style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.surface,
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -63,11 +70,13 @@ class _PomodoroSettingsScreenState extends State<PomodoroSettingsScreen> {
             onChanged: (v) => setState(() => _breakMinutes = v),
           ),
           const SizedBox(height: 32),
-          FilledButton.icon(
+          ElevatedButton.icon(
             onPressed: _saveSettings,
             icon: const Icon(Icons.save),
-            label: const Text("Lưu thay đổi", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            style: FilledButton.styleFrom(
+            label: const Text("LƯU THAY ĐỔI", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.surface,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -87,25 +96,28 @@ class _PomodoroSettingsScreenState extends State<PomodoroSettingsScreen> {
   }) {
     return Card(
       elevation: 0,
-      color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.divider),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Row(
               children: [
-                Icon(icon, color: Theme.of(context).colorScheme.primary),
+                Icon(icon, color: AppColors.primary),
                 const SizedBox(width: 12),
-                Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: AppColors.primary,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text("$value phút", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: Text("$value phút", style: const TextStyle(color: AppColors.surface, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -114,6 +126,7 @@ class _PomodoroSettingsScreenState extends State<PomodoroSettingsScreen> {
               min: min,
               max: max,
               divisions: (max - min).toInt(),
+              activeColor: AppColors.primary,
               onChanged: (v) => onChanged(v.toInt()),
             ),
           ],

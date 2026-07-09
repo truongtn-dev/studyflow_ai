@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_colors.dart';
 import '../../models/task.dart';
 import '../../models/course.dart';
 import '../../repositories/task_repository.dart';
@@ -33,30 +34,17 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   Future<void> _loadData() async {
     final courses = await CourseRepository().getByUserId(widget.userId);
-
-    setState(() {
-      _courses = courses;
-
-      if (courses.isNotEmpty) {
-        _selectedCourse = courses.first;
-      }
-
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _courses = courses;
+        if (courses.isNotEmpty) _selectedCourse = courses.first;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _saveTask() async {
-    if (!_formKey.currentState!.validate() || _courses.isEmpty) return;
-
-
-    if (_selectedCourse == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Vui lòng chọn môn học"),
-        ),
-      );
-      return;
-    }
+    if (!_formKey.currentState!.validate() || _selectedCourse == null) return;
 
     final newTask = Task(
       userId: widget.userId,
@@ -77,12 +65,21 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
     }
 
+
+    final inputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.divider),
+    );
+
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text("Thêm Công Việc Mới", style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.surface,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -91,36 +88,30 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Tiêu đề
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(
                   labelText: "Tiêu đề",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  prefixIcon: const Icon(Icons.title),
+                  border: inputBorder,
+                  prefixIcon: const Icon(Icons.title, color: AppColors.primary),
                 ),
                 validator: (v) => v == null || v.isEmpty ? 'Vui lòng nhập tiêu đề' : null,
               ),
               const SizedBox(height: 15),
 
-              // Mô tả
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 2,
-                decoration: InputDecoration(
-                  labelText: "Mô tả chi tiết",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+                decoration: InputDecoration(labelText: "Mô tả chi tiết", border: inputBorder),
               ),
               const SizedBox(height: 20),
 
-              // Trạng thái & Ưu tiên
               Row(
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<TaskStatus>(
                       value: _status,
-                      decoration: InputDecoration(labelText: "Trạng thái", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                      decoration: InputDecoration(labelText: "Trạng thái", border: inputBorder),
                       items: TaskStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.name.toUpperCase()))).toList(),
                       onChanged: (v) => setState(() => _status = v!),
                     ),
@@ -129,7 +120,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   Expanded(
                     child: DropdownButtonFormField<TaskPriority>(
                       value: _priority,
-                      decoration: InputDecoration(labelText: "Độ ưu tiên", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                      decoration: InputDecoration(labelText: "Độ ưu tiên", border: inputBorder),
                       items: TaskPriority.values.map((p) => DropdownMenuItem(value: p, child: Text(p.name.toUpperCase()))).toList(),
                       onChanged: (v) => setState(() => _priority = v!),
                     ),
@@ -137,47 +128,36 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 ],
               ),
               const SizedBox(height: 20),
+
               DropdownButtonFormField<Course>(
                 value: _selectedCourse,
                 decoration: InputDecoration(
                   labelText: "Môn học",
-                  prefixIcon: const Icon(Icons.book),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  prefixIcon: const Icon(Icons.book, color: AppColors.primary),
+                  border: inputBorder,
                 ),
-                items: _courses.map((course) {
-                  return DropdownMenuItem<Course>(
-                    value: course,
-                    child: Text(course.name),
-                  );
-                }).toList(),
-                onChanged: (course) {
-                  setState(() {
-                    _selectedCourse = course;
-                  });
-                },
-                validator: (value) {
-                  if (value == null) {
-                    return "Vui lòng chọn môn học";
-                  }
-                  return null;
-                },
+                items: _courses.map((c) => DropdownMenuItem(value: c, child: Text(c.name))).toList(),
+                onChanged: (v) => setState(() => _selectedCourse = v),
               ),
 
               const SizedBox(height: 20),
-              // Tiến độ
+              // Card tiến độ
               Card(
-                elevation: 1,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                color: AppColors.surface,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppColors.divider)
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(12.0),
                   child: Column(
                     children: [
-                      Text("Tiến độ: $_progress%", style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text("Tiến độ: $_progress%", style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       Slider(
                         value: _progress.toDouble(),
                         min: 0, max: 100, divisions: 10,
+                        activeColor: AppColors.primary,
                         onChanged: (v) => setState(() => _progress = v.toInt()),
                       ),
                     ],
@@ -188,23 +168,34 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
               // Deadline
               ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: Colors.grey)),
-                leading: const Icon(Icons.calendar_month),
+                tileColor: AppColors.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.divider)),
+                leading: const Icon(Icons.calendar_month, color: AppColors.primary),
                 title: const Text("Hạn chót"),
-                subtitle: Text(_selectedDate.toLocal().toString().split(' ')[0]),
+                subtitle: Text(_selectedDate.toLocal().toString().split(' ')[0], style: const TextStyle(fontWeight: FontWeight.bold)),
                 onTap: () async {
-                  final date = await showDatePicker(context: context, initialDate: _selectedDate, firstDate: DateTime.now(), lastDate: DateTime(2100));
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedDate, firstDate: DateTime.now(), lastDate: DateTime(2100),
+                    builder: (context, child) => Theme(
+                      data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: AppColors.primary)),
+                      child: child!,
+                    ),
+                  );
                   if (date != null) setState(() => _selectedDate = date);
                 },
               ),
               const SizedBox(height: 30),
 
-              // Nút lưu
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.surface,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                   onPressed: _saveTask,
                   child: const Text("LƯU CÔNG VIỆC", style: TextStyle(fontWeight: FontWeight.bold)),
                 ),

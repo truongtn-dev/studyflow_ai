@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_colors.dart';
 import '../../models/task.dart';
 import '../../models/course.dart';
 import '../../repositories/task_repository.dart';
@@ -21,7 +22,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   late int _progress;
   late DateTime _deadline;
 
-
   List<Course> _courses = [];
   Course? _selectedCourse;
   bool _isLoading = true;
@@ -35,21 +35,21 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     _priority = widget.task.priority;
     _progress = widget.task.progress;
     _deadline = DateTime.parse(widget.task.deadline);
-
     _loadCourses();
   }
 
   Future<void> _loadCourses() async {
     final courses = await CourseRepository().getByUserId(widget.task.userId);
-    setState(() {
-      _courses = courses;
-
-      _selectedCourse = courses.firstWhere(
-            (c) => c.id == widget.task.courseId,
-        orElse: () => courses.first,
-      );
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _courses = courses;
+        _selectedCourse = courses.firstWhere(
+              (c) => c.id == widget.task.courseId,
+          orElse: () => courses.isNotEmpty ? courses.first : widget.task.courseId as Course,
+        );
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _updateTask() async {
@@ -72,29 +72,32 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
 
-    final inputBorder = OutlineInputBorder(borderRadius: BorderRadius.circular(12));
+    final inputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.divider),
+    );
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Chỉnh sửa công việc", style: TextStyle(fontWeight: FontWeight.bold))),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text("Chỉnh sửa công việc", style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.surface,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: InputDecoration(labelText: "Tiêu đề", border: inputBorder, prefixIcon: const Icon(Icons.title)),
-                validator: (v) => v!.isEmpty ? 'Vui lòng nhập tiêu đề' : null,
-              ),
+              _buildTextFormField(_titleController, "Tiêu đề", Icons.title, inputBorder),
               const SizedBox(height: 16),
-
 
               DropdownButtonFormField<Course>(
                 value: _selectedCourse,
-                decoration: InputDecoration(labelText: "Môn học", border: inputBorder, prefixIcon: const Icon(Icons.book)),
+                decoration: InputDecoration(labelText: "Môn học", border: inputBorder, prefixIcon: const Icon(Icons.book, color: AppColors.primary)),
                 items: _courses.map((c) => DropdownMenuItem(value: c, child: Text(c.name))).toList(),
                 onChanged: (v) => setState(() => _selectedCourse = v),
               ),
@@ -117,14 +120,17 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               const SizedBox(height: 16),
 
               Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                color: AppColors.surface,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.divider)),
                 child: Padding(
                   padding: const EdgeInsets.all(12.0),
                   child: Column(
                     children: [
-                      Text("Tiến độ: $_progress%", style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text("Tiến độ: $_progress%", style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       Slider(
                         value: _progress.toDouble(), min: 0, max: 100, divisions: 10,
+                        activeColor: AppColors.primary,
                         onChanged: (v) => setState(() => _progress = v.toInt()),
                       ),
                     ],
@@ -134,12 +140,20 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               const SizedBox(height: 16),
 
               ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade300)),
-                leading: const Icon(Icons.calendar_today, color: Colors.blue),
+                tileColor: AppColors.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.divider)),
+                leading: const Icon(Icons.calendar_today, color: AppColors.primary),
                 title: const Text("Hạn chót"),
-                subtitle: Text(_deadline.toLocal().toString().split(' ')[0], style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(_deadline.toLocal().toString().split(' ')[0], style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 onTap: () async {
-                  final date = await showDatePicker(context: context, initialDate: _deadline, firstDate: DateTime.now(), lastDate: DateTime(2100));
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _deadline, firstDate: DateTime.now(), lastDate: DateTime(2100),
+                    builder: (context, child) => Theme(
+                      data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: AppColors.primary)),
+                      child: child!,
+                    ),
+                  );
                   if (date != null) setState(() => _deadline = date);
                 },
               ),
@@ -149,7 +163,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.surface,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                  ),
                   onPressed: _updateTask,
                   child: const Text("LƯU THAY ĐỔI", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
@@ -160,6 +178,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       ),
     );
   }
+
+  Widget _buildTextFormField(TextEditingController controller, String label, IconData icon, OutlineInputBorder border) =>
+      TextFormField(
+        controller: controller,
+        decoration: InputDecoration(labelText: label, border: border, prefixIcon: Icon(icon, color: AppColors.primary)),
+        validator: (v) => v!.isEmpty ? 'Vui lòng nhập $label' : null,
+      );
 
   Widget _buildDropdownStatus(InputBorder border) => DropdownButtonFormField<TaskStatus>(
     value: _status,

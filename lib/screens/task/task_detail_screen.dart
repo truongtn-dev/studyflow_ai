@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_colors.dart';
 import '../../models/task.dart';
 import '../../models/course.dart';
 import '../../repositories/task_repository.dart';
@@ -41,7 +42,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.surface,
         title: const Text("Chi tiết công việc", style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
@@ -63,7 +67,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         future: _taskFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
           }
           final task = snapshot.data;
           if (task == null) return const Center(child: Text("Không tìm thấy thông tin"));
@@ -71,15 +75,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           return ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
-              Text(task.title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+              Text(task.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 12),
 
-
               if (_course != null)
-                Chip(
-                  avatar: const Icon(Icons.book, size: 16),
-                  label: Text(_course!.name),
-                  backgroundColor: Colors.blue.withOpacity(0.1),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Chip(
+                    avatar: const Icon(Icons.book, size: 16, color: AppColors.secondary),
+                    label: Text(_course!.name, style: const TextStyle(color: AppColors.secondary)),
+                    backgroundColor: AppColors.secondaryContainer,
+                    side: BorderSide.none,
+                  ),
                 ),
               const SizedBox(height: 20),
 
@@ -97,7 +104,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               const SizedBox(height: 20),
               DropdownButtonFormField<TaskStatus>(
                 value: task.status,
-                decoration: const InputDecoration(labelText: "Cập nhật trạng thái", border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: "Cập nhật trạng thái",
+                    border: OutlineInputBorder(),
+                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.primary))
+                ),
                 items: TaskStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.name.toUpperCase()))).toList(),
                 onChanged: (newStatus) async {
                   if (newStatus != null) {
@@ -112,36 +123,27 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
+                    backgroundColor: AppColors.error,
+                    foregroundColor: AppColors.surface,
                     padding: const EdgeInsets.symmetric(vertical: 15)
                 ),
-                icon: const Icon(Icons.delete, color: Colors.white),
-                label: const Text("Xóa công việc", style: TextStyle(color: Colors.white)),
+                icon: const Icon(Icons.delete),
+                label: const Text("Xóa công việc", style: TextStyle(fontWeight: FontWeight.bold)),
                 onPressed: () async {
-
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text("Xác nhận xóa"),
                       content: const Text("Bạn có chắc chắn muốn xóa công việc này không?"),
                       actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text("Hủy"),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          style: TextButton.styleFrom(foregroundColor: Colors.red),
-                          child: const Text("Xóa"),
-                        ),
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Hủy")),
+                        TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: AppColors.error), child: const Text("Xóa")),
                       ],
                     ),
                   );
-
-
                   if (confirm == true && mounted) {
                     await TaskRepository().delete(task.id!);
-                    if (mounted) Navigator.pop(context); // về danh sách
+                    if (mounted) Navigator.pop(context);
                   }
                 },
               ),
@@ -153,30 +155,40 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Widget _buildSection(String title, String content) => Card(
+    color: AppColors.surface,
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.divider)),
     child: Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
         const SizedBox(height: 8),
-        Text(content),
+        Text(content, style: const TextStyle(color: AppColors.textPrimary)),
       ]),
     ),
   );
 
   Widget _buildInfoCard(String label, String value) => Card(
+    color: AppColors.surface,
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.divider)),
     child: Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary)),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary)),
       ]),
     ),
   );
 
   Widget _buildInfoRow(String label, String value) => Card(
+    color: AppColors.surface,
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.divider)),
     child: ListTile(
-      title: Text(label),
-      trailing: Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+      title: Text(label, style: const TextStyle(color: AppColors.textSecondary)),
+      trailing: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
     ),
   );
 }
