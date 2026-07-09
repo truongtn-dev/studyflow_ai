@@ -15,11 +15,11 @@ class _MainShellState extends State<MainShell> {
   int _index = 0;
 
   static const _tabs = [
-    _TabItem(Icons.home_rounded, 'Home'),
-    _TabItem(Icons.task_alt_rounded, 'Tasks'),
-    _TabItem(Icons.timer_rounded, 'Focus'),
-    _TabItem(Icons.style_rounded, 'Cards'),
-    _TabItem(Icons.person_rounded, 'Profile'),
+    _TabItem(Icons.home_outlined, Icons.home_rounded, 'Home'),
+    _TabItem(Icons.task_alt_outlined, Icons.task_alt_rounded, 'Tasks'),
+    _TabItem(Icons.timer_outlined, Icons.timer_rounded, 'Focus'),
+    _TabItem(Icons.style_outlined, Icons.style_rounded, 'Cards'),
+    _TabItem(Icons.person_outlined, Icons.person_rounded, 'Profile'),
   ];
 
   final _screens = const [
@@ -37,10 +37,12 @@ class _MainShellState extends State<MainShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
+        indicatorColor: const Color(0xFF5B5FEF),
         destinations: [
           for (final tab in _tabs)
             NavigationDestination(
               icon: Icon(tab.icon),
+              selectedIcon: Icon(tab.selectedIcon),
               label: tab.label,
             ),
         ],
@@ -50,7 +52,8 @@ class _MainShellState extends State<MainShell> {
 }
 
 class _TabItem {
-  const _TabItem(this.icon, this.label);
+  const _TabItem(this.icon, this.selectedIcon, this.label);
   final IconData icon;
+  final IconData selectedIcon;
   final String label;
 }

@@ -5,6 +5,7 @@ abstract final class AppConstants {
   static const minCoursesForAi = 1;
   static const minTasksForStudyPlan = 3;
   static const sessionUserIdKey = 'user_id';
+  static const hasSeenOnboardingKey = 'has_seen_onboarding';
 }
 
 enum AiPromptType {
