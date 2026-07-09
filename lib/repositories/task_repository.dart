@@ -75,4 +75,40 @@ class TaskRepository {
       await database.insert('tasks', task);
     }
   }
+  // Thêm một task mới
+  Future<int> insert(Task task) async {
+    final database = await _db.database;
+    return await database.insert('tasks', task.toMap());
+  }
+
+  // Cập nhật task hiện có
+  Future<int> update(Task task) async {
+    final database = await _db.database;
+    return await database.update(
+      'tasks',
+      task.toMap(),
+      where: 'id = ?',
+      whereArgs: [task.id],
+    );
+  }
+
+  // Xóa một task
+  Future<void> delete(int id) async {
+    final database = await _db.database;
+    await database.delete('tasks', where: 'id = ?', whereArgs: [id]);
+  }
+  // Bổ sung vào class TaskRepository
+  Future<Task?> getById(int taskId) async {
+    final database = await _db.database;
+    final maps = await database.query(
+      'tasks',
+      where: 'id = ?',
+      whereArgs: [taskId],
+    );
+
+    if (maps.isNotEmpty) {
+      return Task.fromMap(maps.first);
+    }
+    return null; // Trả về null nếu không tìm thấy task
+  }
 }
