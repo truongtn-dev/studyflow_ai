@@ -5,6 +5,7 @@ import '../../widgets/sf_card.dart';
 import 'ai_coach_screen.dart';
 import 'ai_explain_screen.dart';
 import 'ai_history_screen.dart';
+import 'ai_notes_screen.dart';
 import 'ai_settings_screen.dart';
 import 'ai_study_plan_screen.dart';
 
@@ -31,6 +32,12 @@ class AiHubScreen extends StatelessWidget {
         title: 'Giải thích concept',
         subtitle: 'Provider, SQLite, async...',
         screen: const AiExplainScreen(),
+      ),
+      _AiMenuItem(
+        icon: Icons.bookmark_outline_rounded,
+        title: 'Ghi chú AI',
+        subtitle: 'CRUD ghi chú học từ câu trả lời AI',
+        screen: const AiNotesScreen(),
       ),
       _AiMenuItem(
         icon: Icons.history_rounded,

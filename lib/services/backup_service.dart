@@ -1,12 +1,14 @@
 import 'dart:convert';
 
 import '../db/database_helper.dart';
+import '../models/ai_note.dart';
 import '../models/app_notification.dart';
 import '../models/course.dart';
 import '../models/flashcard.dart';
 import '../models/study_session.dart';
 import '../models/task.dart';
 import '../repositories/achievement_repository.dart';
+import '../repositories/ai_note_repository.dart';
 import '../repositories/course_repository.dart';
 import '../repositories/flashcard_repository.dart';
 import '../repositories/notification_repository.dart';
@@ -23,6 +25,7 @@ class BackupRestoreService {
   final _sessions = StudySessionRepository();
   final _achievements = AchievementRepository();
   final _notifications = NotificationRepository();
+  final _aiNotes = AiNoteRepository();
 
   Future<String> exportJson(int userId) async {
     final user = await _users.findById(userId);
@@ -34,6 +37,7 @@ class BackupRestoreService {
     final sessions = await _sessions.getByUserId(userId);
     final achievements = await _achievements.getByUserId(userId);
     final notifications = await _notifications.getByUserId(userId);
+    final aiNotes = await _aiNotes.getByUserId(userId);
 
     final payload = {
       'version': 1,
@@ -51,6 +55,7 @@ class BackupRestoreService {
       'achievements':
           achievements.map((a) => {'badge_code': a.badgeCode}).toList(),
       'notifications': notifications.map((n) => n.toMap()).toList(),
+      'ai_notes': aiNotes.map((n) => n.toMap()).toList(),
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
   }
@@ -74,6 +79,7 @@ class BackupRestoreService {
             .delete('achievements', where: 'user_id = ?', whereArgs: [userId]);
         await txn
             .delete('notifications', where: 'user_id = ?', whereArgs: [userId]);
+        await txn.delete('ai_notes', where: 'user_id = ?', whereArgs: [userId]);
         await txn.delete('ai_cache', where: 'user_id = ?', whereArgs: [userId]);
         await txn.delete('courses', where: 'user_id = ?', whereArgs: [userId]);
       });
@@ -145,6 +151,17 @@ class BackupRestoreService {
         map.remove('id');
         map['user_id'] = userId;
         await _notifications.insert(AppNotification.fromMap(map));
+      }
+
+      for (final raw in (decoded['ai_notes'] as List? ?? [])) {
+        final map = Map<String, dynamic>.from(raw as Map);
+        map.remove('id');
+        map['user_id'] = userId;
+        final oldCourseId = map['course_id'] as int?;
+        if (oldCourseId != null) {
+          map['course_id'] = oldCourseIdToNew[oldCourseId];
+        }
+        await _aiNotes.insert(AiNote.fromMap(map));
       }
     } finally {
       await database.execute('PRAGMA foreign_keys = ON');

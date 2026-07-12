@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/ai_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/chat_bubble.dart';
+import 'ai_note_editor_screen.dart';
 
 class AiCoachScreen extends StatefulWidget {
   const AiCoachScreen({super.key});
@@ -87,9 +88,28 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
                           ),
                         ),
                       ),
-                    ...ai.messages.map(
-                      (m) => ChatBubble(text: m.text, isUser: m.isUser),
-                    ),
+                    ...ai.messages.asMap().entries.map((entry) {
+                      final m = entry.value;
+                      final prevQuestion = entry.key > 0 &&
+                              !m.isUser &&
+                              ai.messages[entry.key - 1].isUser
+                          ? ai.messages[entry.key - 1].text
+                          : 'Ghi chú từ AI Coach';
+                      return ChatBubble(
+                        text: m.text,
+                        isUser: m.isUser,
+                        onSaveNote: m.isUser
+                            ? null
+                            : () => saveAiResponseAsNote(
+                                  context,
+                                  title: prevQuestion.length > 60
+                                      ? '${prevQuestion.substring(0, 60)}…'
+                                      : prevQuestion,
+                                  content: m.text,
+                                  source: 'chat',
+                                ),
+                      );
+                    }),
                     if (ai.isLoading) const AiLoadingBubble(),
                   ],
                 ),

@@ -7,6 +7,7 @@ import '../../widgets/ai_markdown_message.dart';
 import '../../widgets/loading_shimmer.dart';
 import '../../widgets/sf_button.dart';
 import '../../widgets/sf_card.dart';
+import 'ai_note_editor_screen.dart';
 
 class AiStudyPlanScreen extends StatelessWidget {
   const AiStudyPlanScreen({super.key});
@@ -48,10 +49,24 @@ class AiStudyPlanScreen extends StatelessWidget {
               const SizedBox(height: 16),
               if (ai.isLoading)
                 const LoadingShimmer(itemCount: 4)
-              else if (ai.studyPlanResult != null)
+              else if (ai.studyPlanResult != null) ...[
                 SfCard(
                   child: AiMarkdownMessage(text: ai.studyPlanResult!),
                 ),
+                const SizedBox(height: 12),
+                SfButton(
+                  label: 'Lưu lịch vào Ghi chú AI',
+                  icon: Icons.bookmark_add_outlined,
+                  variant: SfButtonVariant.outlined,
+                  expand: true,
+                  onPressed: () => saveAiResponseAsNote(
+                    context,
+                    title: 'Lịch học 7 ngày',
+                    content: ai.studyPlanResult!,
+                    source: 'study_plan',
+                  ),
+                ),
+              ],
             ],
           ),
         );
