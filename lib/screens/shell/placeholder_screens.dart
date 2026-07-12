@@ -1,47 +1,32 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_colors.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/auth_provider.dart';
 import '../../widgets/empty_state.dart';
-import 'package:studyflow_ai/screens/task/task_list_screen.dart' as task;
-import 'package:studyflow_ai/screens/study/pomodoro_screen.dart' as pomodoro;
+import '../flashcard/flashcard_list_screen.dart' as flashcards;
+import '../study/pomodoro_screen.dart' as pomodoro;
+import '../task/task_list_screen.dart' as task;
 
-class PlaceholderTabScreen extends StatelessWidget {
-  const PlaceholderTabScreen({
-    super.key,
-    required this.title,
-    required this.icon,
-    required this.assignee,
-  });
-
-  final String title;
-  final IconData icon;
-  final String assignee;
+class TasksTab extends StatelessWidget {
+  const TasksTab({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: EmptyState(
-        title: '$title – đang phát triển',
-        subtitle: 'Phụ trách: $assignee',
-        icon: icon,
-      ),
-    );
+    final userId = context.watch<AuthProvider>().userId;
+    if (userId == null) {
+      return const Scaffold(
+        body: EmptyState(
+          title: 'Vui lòng đăng nhập',
+          icon: Icons.lock_outline,
+        ),
+      );
+    }
+    return task.TaskListScreen(userId: userId);
   }
 }
 
-class TaskListScreen extends StatelessWidget {
-  const TaskListScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const task.TaskListScreen(
-      userId: 1,
-    );
-  }
-}
-
-class PomodoroScreen extends StatelessWidget {
-  const PomodoroScreen({super.key});
+class FocusTab extends StatelessWidget {
+  const FocusTab({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -49,15 +34,16 @@ class PomodoroScreen extends StatelessWidget {
   }
 }
 
-class FlashcardListScreen extends StatelessWidget {
-  const FlashcardListScreen({super.key});
+class CardsTab extends StatelessWidget {
+  const CardsTab({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const PlaceholderTabScreen(
-      title: 'Flashcards',
-      icon: Icons.style_rounded,
-      assignee: 'Nhất Thiện',
-    );
+    return const flashcards.FlashcardListScreen();
   }
 }
+
+/// Backward-compatible aliases used by older imports.
+typedef TaskListScreen = TasksTab;
+typedef PomodoroScreen = FocusTab;
+typedef FlashcardListScreen = CardsTab;

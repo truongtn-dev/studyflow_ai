@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../models/user.dart';
 import '../../providers/ai_provider.dart';
-import '../../repositories/user_repository.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/achievement_service.dart';
 import '../../theme/app_colors.dart';
-import '../../utils/constants.dart';
 import '../shell/main_shell.dart';
 import 'onboarding_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _users = UserRepository();
 
   bool _obscurePassword = true;
   bool _submitting = false;
@@ -44,10 +42,10 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final user = await _users.authenticate(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
+      final user = await context.read<AuthProvider>().login(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
 
       if (user == null) {
         setState(() {
@@ -57,7 +55,9 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      await _persistSession(user);
+      if (!mounted) return;
+      await context.read<AiProvider>().setUserSession(user.id!);
+      await AchievementService().evaluate(user.id!);
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const MainShell()),
@@ -68,13 +68,6 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _submitting = false);
       }
     }
-  }
-
-  Future<void> _persistSession(User user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(AppConstants.sessionUserIdKey, user.id!);
-    if (!mounted) return;
-    await context.read<AiProvider>().setUserSession(user.id!);
   }
 
   void _showComingSoon(String message) {
@@ -348,9 +341,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                       ),
                       TextButton(
-                        onPressed: () => _showComingSoon(
-                          'Màn đăng ký sẽ được làm ở bước tiếp theo.',
-                        ),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
+                          );
+                        },
                         child: const Text(
                           'Đăng ký ngay',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),

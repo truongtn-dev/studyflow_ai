@@ -29,7 +29,7 @@ class AiProvider extends ChangeNotifier {
   final CourseRepository _courses;
   final TaskRepository _tasks;
 
-  int _userId = 1;
+  int? _userId;
   bool _loading = false;
   String? _error;
   final List<ChatMessage> _messages = [];
@@ -38,7 +38,7 @@ class AiProvider extends ChangeNotifier {
   List<AiCacheEntry> _history = [];
   int _remainingQuota = AppConstants.maxAiRequestsPerDay;
 
-  int get userId => _userId;
+  int? get userId => _userId;
   bool get isLoading => _loading;
   String? get error => _error;
   List<ChatMessage> get messages => List.unmodifiable(_messages);
@@ -50,9 +50,11 @@ class AiProvider extends ChangeNotifier {
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _userId = prefs.getInt(AppConstants.sessionUserIdKey) ?? 1;
-    await _refreshQuota();
-    await loadHistory();
+    _userId = prefs.getInt(AppConstants.sessionUserIdKey);
+    if (_userId != null) {
+      await _refreshQuota();
+      await loadHistory();
+    }
     notifyListeners();
   }
 
@@ -67,11 +69,33 @@ class AiProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> clearSession() async {
+    _userId = null;
+    _error = null;
+    _messages.clear();
+    _studyPlanResult = null;
+    _explainResult = null;
+    _history = [];
+    _remainingQuota = AppConstants.maxAiRequestsPerDay;
+    notifyListeners();
+  }
+
   Future<void> _refreshQuota() async {
-    _remainingQuota = await _quota.getRemaining(_userId);
+    if (_userId == null) {
+      _remainingQuota = AppConstants.maxAiRequestsPerDay;
+      return;
+    }
+    _remainingQuota = await _quota.getRemaining(_userId!);
   }
 
   Future<bool> _canUseAi({bool requireStudyData = false}) async {
+    if (_userId == null) {
+      _error = 'Vui lòng đăng nhập để dùng AI.';
+      notifyListeners();
+      return false;
+    }
+    final uid = _userId!;
+
     if (!_groq.hasApiKey) {
       _error =
           'Chưa cấu hình GROQ_KEY. Lấy key miễn phí tại console.groq.com/keys';
@@ -79,7 +103,7 @@ class AiProvider extends ChangeNotifier {
       return false;
     }
 
-    if (!await _quota.canRequest(_userId)) {
+    if (!await _quota.canRequest(uid)) {
       _error =
           'Đã hết ${AppConstants.maxAiRequestsPerDay} lượt AI hôm nay. Xem lại lịch sử offline.';
       notifyListeners();
@@ -87,8 +111,8 @@ class AiProvider extends ChangeNotifier {
     }
 
     if (requireStudyData) {
-      final courseCount = (await _courses.getByUserId(_userId)).length;
-      final taskCount = await _tasks.countByUserId(_userId);
+      final courseCount = (await _courses.getByUserId(uid)).length;
+      final taskCount = await _tasks.countByUserId(uid);
       if (courseCount < AppConstants.minCoursesForAi ||
           taskCount < AppConstants.minTasksForStudyPlan) {
         _error =
@@ -105,6 +129,7 @@ class AiProvider extends ChangeNotifier {
     final trimmed = text.trim();
     if (trimmed.isEmpty || _loading) return;
     if (!await _canUseAi()) return;
+    final uid = _userId!;
 
     _error = null;
     _messages.add(ChatMessage(text: trimmed, isUser: true, timestamp: DateTime.now()));
@@ -114,7 +139,7 @@ class AiProvider extends ChangeNotifier {
     try {
       final hash = AiCacheRepository.hashPrompt(AiPromptType.chat.value, trimmed);
       final cached = await _cache.findByHash(
-        userId: _userId,
+        userId: uid,
         promptType: AiPromptType.chat.value,
         promptHash: hash,
       );
@@ -124,8 +149,8 @@ class AiProvider extends ChangeNotifier {
         reply = cached.response;
       } else {
         reply = await _groq.chat(_buildChatPrompt(trimmed));
-        await _saveCache(AiPromptType.chat.value, hash, reply);
-        await _quota.increment(_userId);
+        await _saveCache(uid, AiPromptType.chat.value, hash, reply);
+        await _quota.increment(uid);
         await _refreshQuota();
       }
 
@@ -141,6 +166,7 @@ class AiProvider extends ChangeNotifier {
   Future<void> generateStudyPlan() async {
     if (_loading) return;
     if (!await _canUseAi(requireStudyData: true)) return;
+    final uid = _userId!;
 
     _error = null;
     _loading = true;
@@ -148,13 +174,13 @@ class AiProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final courses = await _courses.getByUserId(_userId);
-      final tasks = await _tasks.getByUserId(_userId);
+      final courses = await _courses.getByUserId(uid);
+      final tasks = await _tasks.getByUserId(uid);
       final contextKey = '${courses.length}_${tasks.map((t) => t.id).join(',')}';
       final hash = AiCacheRepository.hashPrompt(AiPromptType.studyPlan.value, contextKey);
 
       final cached = await _cache.findByHash(
-        userId: _userId,
+        userId: uid,
         promptType: AiPromptType.studyPlan.value,
         promptHash: hash,
       );
@@ -163,8 +189,8 @@ class AiProvider extends ChangeNotifier {
         _studyPlanResult = cached.response;
       } else {
         _studyPlanResult = await _groq.generateStudyPlan(courses: courses, tasks: tasks);
-        await _saveCache(AiPromptType.studyPlan.value, hash, _studyPlanResult!);
-        await _quota.increment(_userId);
+        await _saveCache(uid, AiPromptType.studyPlan.value, hash, _studyPlanResult!);
+        await _quota.increment(uid);
         await _refreshQuota();
       }
     } catch (e) {
@@ -179,6 +205,7 @@ class AiProvider extends ChangeNotifier {
     final trimmed = concept.trim();
     if (trimmed.isEmpty || _loading) return;
     if (!await _canUseAi()) return;
+    final uid = _userId!;
 
     _error = null;
     _loading = true;
@@ -188,7 +215,7 @@ class AiProvider extends ChangeNotifier {
     try {
       final hash = AiCacheRepository.hashPrompt(AiPromptType.explain.value, trimmed);
       final cached = await _cache.findByHash(
-        userId: _userId,
+        userId: uid,
         promptType: AiPromptType.explain.value,
         promptHash: hash,
       );
@@ -197,8 +224,8 @@ class AiProvider extends ChangeNotifier {
         _explainResult = cached.response;
       } else {
         _explainResult = await _groq.explainConcept(trimmed);
-        await _saveCache(AiPromptType.explain.value, hash, _explainResult!);
-        await _quota.increment(_userId);
+        await _saveCache(uid, AiPromptType.explain.value, hash, _explainResult!);
+        await _quota.increment(uid);
         await _refreshQuota();
       }
     } catch (e) {
@@ -210,12 +237,18 @@ class AiProvider extends ChangeNotifier {
   }
 
   Future<void> loadHistory() async {
-    _history = await _cache.getHistory(_userId);
+    if (_userId == null) {
+      _history = [];
+      notifyListeners();
+      return;
+    }
+    _history = await _cache.getHistory(_userId!);
     notifyListeners();
   }
 
   Future<void> clearHistory() async {
-    await _cache.clearHistory(_userId);
+    if (_userId == null) return;
+    await _cache.clearHistory(_userId!);
     _history = [];
     notifyListeners();
   }
@@ -239,10 +272,10 @@ Câu hỏi: $userMessage
 ''';
   }
 
-  Future<void> _saveCache(String type, String hash, String response) async {
+  Future<void> _saveCache(int uid, String type, String hash, String response) async {
     await _cache.insert(
       AiCacheEntry(
-        userId: _userId,
+        userId: uid,
         promptType: type,
         promptHash: hash,
         response: response,

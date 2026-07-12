@@ -75,29 +75,31 @@ class TaskRepository {
       await database.insert('tasks', task);
     }
   }
-  // Thêm một task mới
   Future<int> insert(Task task) async {
     final database = await _db.database;
-    return await database.insert('tasks', task.toMap());
+    final map = task.toMap()..remove('id');
+    if ((map['created_at'] as String?)?.isEmpty ?? true) {
+      map.remove('created_at');
+    }
+    return database.insert('tasks', map);
   }
 
-  // Cập nhật task hiện có
   Future<int> update(Task task) async {
     final database = await _db.database;
-    return await database.update(
+    final map = task.toMap()..remove('id');
+    return database.update(
       'tasks',
-      task.toMap(),
+      map,
       where: 'id = ?',
       whereArgs: [task.id],
     );
   }
 
-  // Xóa một task
   Future<void> delete(int id) async {
     final database = await _db.database;
     await database.delete('tasks', where: 'id = ?', whereArgs: [id]);
   }
-  // Bổ sung vào class TaskRepository
+
   Future<Task?> getById(int taskId) async {
     final database = await _db.database;
     final maps = await database.query(
@@ -109,6 +111,34 @@ class TaskRepository {
     if (maps.isNotEmpty) {
       return Task.fromMap(maps.first);
     }
-    return null; // Trả về null nếu không tìm thấy task
+    return null;
+  }
+
+  /// Mark past-deadline incomplete tasks as overdue.
+  Future<int> syncOverdue(int userId) async {
+    final database = await _db.database;
+    final now = DateTime.now().toIso8601String();
+    return database.rawUpdate(
+      '''
+      UPDATE tasks
+      SET status = 'overdue'
+      WHERE user_id = ?
+        AND status IN ('todo', 'doing')
+        AND deadline < ?
+      ''',
+      [userId, now],
+    );
+  }
+
+  Future<List<Task>> getOverdue(int userId) async {
+    await syncOverdue(userId);
+    final database = await _db.database;
+    final maps = await database.query(
+      'tasks',
+      where: "user_id = ? AND status = 'overdue'",
+      whereArgs: [userId],
+      orderBy: 'deadline ASC',
+    );
+    return maps.map(Task.fromMap).toList();
   }
 }
