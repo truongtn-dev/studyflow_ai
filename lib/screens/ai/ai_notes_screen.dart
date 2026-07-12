@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/ai_note.dart';
 import '../../models/course.dart';
+import '../../providers/ai_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../repositories/ai_note_repository.dart';
 import '../../repositories/course_repository.dart';
@@ -13,6 +15,7 @@ import '../../widgets/ai_markdown_message.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/sf_card.dart';
 import 'ai_note_editor_screen.dart';
+import 'ai_note_quiz_screen.dart';
 
 class AiNotesScreen extends StatefulWidget {
   const AiNotesScreen({super.key});
@@ -29,6 +32,7 @@ class _AiNotesScreenState extends State<AiNotesScreen> {
   List<AiNote> _notes = [];
   List<Course> _courseList = [];
   int? _filterCourseId;
+  bool _pinnedOnly = false;
   bool _loading = true;
 
   @override
@@ -56,10 +60,12 @@ class _AiNotesScreenState extends State<AiNotesScreen> {
       courseId: _filterCourseId,
       query: _searchController.text,
     );
+    final filtered =
+        _pinnedOnly ? notes.where((n) => n.isPinned).toList() : notes;
     if (!mounted) return;
     setState(() {
       _courseList = courses;
-      _notes = notes;
+      _notes = filtered;
       _loading = false;
     });
   }
@@ -183,6 +189,31 @@ class _AiNotesScreenState extends State<AiNotesScreen> {
                 setState(() => _filterCourseId = v);
                 _load();
               },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                FilterChip(
+                  label: const Text('Tất cả'),
+                  selected: !_pinnedOnly,
+                  onSelected: (_) {
+                    setState(() => _pinnedOnly = false);
+                    _load();
+                  },
+                ),
+                FilterChip(
+                  avatar: const Icon(Icons.push_pin, size: 16),
+                  label: const Text('Đã ghim'),
+                  selected: _pinnedOnly,
+                  onSelected: (_) {
+                    setState(() => _pinnedOnly = true);
+                    _load();
+                  },
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -313,6 +344,7 @@ class _AiNoteDetailScreenState extends State<AiNoteDetailScreen> {
   AiNote? _note;
   String? _courseName;
   bool _loading = true;
+  bool _busy = false;
   bool _changed = false;
 
   @override
@@ -355,6 +387,112 @@ class _AiNoteDetailScreenState extends State<AiNoteDetailScreen> {
     await _load();
   }
 
+  Future<void> _share() async {
+    if (_note == null) return;
+    final buffer = StringBuffer()
+      ..writeln(_note!.title)
+      ..writeln()
+      ..writeln(_note!.content);
+    if (_courseName != null && _courseName!.isNotEmpty) {
+      buffer.writeln('\nMôn: $_courseName');
+    }
+    await Clipboard.setData(ClipboardData(text: buffer.toString()));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Đã sao chép ghi chú — dán để chia sẻ.')),
+    );
+  }
+
+  Future<void> _summarize() async {
+    if (_note == null || _busy) return;
+    setState(() => _busy = true);
+    final ai = context.read<AiProvider>();
+    final summary = await ai.summarizeAiNote(
+      title: _note!.title,
+      content: _note!.content,
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    if (summary == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ai.error ?? 'Không rút gọn được. Kiểm tra API key / quota.')),
+      );
+      return;
+    }
+
+    final action = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Bản rút gọn AI'),
+        content: SingleChildScrollView(child: Text(summary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'copy'),
+            child: const Text('Sao chép'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, 'replace'),
+            child: const Text('Thay nội dung'),
+          ),
+        ],
+      ),
+    );
+
+    if (action == 'copy') {
+      await Clipboard.setData(ClipboardData(text: summary));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã sao chép bản rút gọn.')),
+      );
+    } else if (action == 'replace' && _note != null) {
+      await _repo.update(_note!.copyWith(content: summary));
+      _changed = true;
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã cập nhật nội dung ghi chú.')),
+      );
+    }
+  }
+
+  Future<void> _startQuiz() async {
+    if (_note == null || _busy) return;
+    setState(() => _busy = true);
+    final ai = context.read<AiProvider>();
+    final questions = await ai.quizFromAiNote(
+      title: _note!.title,
+      content: _note!.content,
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    if (questions == null || questions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ai.error ?? 'Không tạo được quiz. Kiểm tra API key / quota.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AiNoteQuizScreen(
+          noteTitle: _note!.title,
+          questions: questions,
+        ),
+      ),
+    );
+  }
+
   Future<void> _delete() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -382,6 +520,9 @@ class _AiNoteDetailScreenState extends State<AiNoteDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final aiLoading = context.watch<AiProvider>().isLoading;
+    final showBusy = _busy || aiLoading;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -396,6 +537,11 @@ class _AiNoteDetailScreenState extends State<AiNoteDetailScreen> {
             onPressed: () => Navigator.pop(context, _changed),
           ),
           actions: [
+            IconButton(
+              tooltip: 'Sao chép / chia sẻ',
+              onPressed: _note == null ? null : _share,
+              icon: const Icon(Icons.ios_share_outlined),
+            ),
             IconButton(
               tooltip: _note?.isPinned == true ? 'Bỏ ghim' : 'Ghim',
               onPressed: _note == null ? null : _togglePin,
@@ -422,36 +568,73 @@ class _AiNoteDetailScreenState extends State<AiNoteDetailScreen> {
                     title: 'Không tìm thấy ghi chú',
                     icon: Icons.search_off,
                   )
-                : ListView(
-                    padding: const EdgeInsets.all(16),
+                : Stack(
                     children: [
-                      Text(
-                        _note!.title,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                      ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                         children: [
-                          Chip(label: Text('Nguồn: ${_note!.source}')),
-                          if (_courseName != null && _courseName!.isNotEmpty)
-                            Chip(label: Text('Môn: $_courseName')),
-                          if (_note!.tags.trim().isNotEmpty)
-                            ..._note!.tags.split(',').map(
-                                  (t) => Chip(
-                                    label: Text(t.trim()),
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                ),
+                          Text(
+                            _note!.title,
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              Chip(label: Text('Nguồn: ${_note!.source}')),
+                              if (_courseName != null && _courseName!.isNotEmpty)
+                                Chip(label: Text('Môn: $_courseName')),
+                              if (_note!.tags.trim().isNotEmpty)
+                                ..._note!.tags.split(',').map(
+                                      (t) => Chip(
+                                        label: Text(t.trim()),
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                    ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          SfCard(
+                            child: AiMarkdownMessage(text: _note!.content),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      SfCard(
-                        child: AiMarkdownMessage(text: _note!.content),
+                      if (showBusy)
+                        const Positioned.fill(
+                          child: ColoredBox(
+                            color: Color(0x66000000),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                        ),
+                    ],
+                  ),
+        bottomNavigationBar: _note == null
+            ? null
+            : SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: showBusy ? null : _summarize,
+                          icon: const Icon(Icons.short_text_rounded),
+                          label: const Text('Rút gọn AI'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: showBusy ? null : _startQuiz,
+                          icon: const Icon(Icons.quiz_outlined),
+                          label: const Text('Quiz ôn'),
+                        ),
                       ),
                     ],
                   ),
+                ),
+              ),
       ),
     );
   }

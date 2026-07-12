@@ -74,6 +74,52 @@ Nếu là khái niệm lập trình, bắt buộc có ít nhất 1 code block ma
     );
   }
 
+  /// Rút gọn / làm sạch ghi chú AI đã lưu (vẫn thuộc module AI).
+  Future<String> summarizeNote({
+    required String title,
+    required String content,
+  }) async {
+    _ensureApiKey();
+    final prompt = '''
+Rút gọn và làm sạch ghi chú học tập sau cho sinh viên FPT.
+Giữ ý chính, bullet ngắn, tiếng Việt. Giữ code block nếu có.
+
+Tiêu đề: $title
+
+Nội dung:
+$content
+''';
+    return _withRetry(
+      () => _chatCompletion(systemPrompt: _systemPrompt, userPrompt: prompt),
+    );
+  }
+
+  /// Sinh quiz ôn nhanh từ ghi chú — JSON thuần, không dùng bảng flashcards.
+  Future<String> generateNoteQuizRaw({
+    required String title,
+    required String content,
+  }) async {
+    _ensureApiKey();
+    final prompt = '''
+Từ ghi chú học tập dưới đây, tạo đúng 5 câu trắc nghiệm ôn nhanh.
+Chỉ trả về JSON hợp lệ (không markdown fence), dạng:
+{"questions":[{"question":"...","options":["A","B","C","D"],"correctIndex":0,"explanation":"..."}]}
+correctIndex là số 0-3. Tiếng Việt. Bám sát nội dung ghi chú.
+
+Tiêu đề: $title
+
+Nội dung:
+$content
+''';
+    return _withRetry(
+      () => _chatCompletion(
+        systemPrompt:
+            '$_systemPrompt\nChỉ trả JSON hợp lệ, không giải thích thêm.',
+        userPrompt: prompt,
+      ),
+    );
+  }
+
   static const _systemPrompt = '''
 Bạn là AI Coach của app StudyFlow AI, hỗ trợ sinh viên FPT University học tập (PRM393, PRO192, MOB1023...).
 Trả lời tiếng Việt, ngắn gọn, thực tế.

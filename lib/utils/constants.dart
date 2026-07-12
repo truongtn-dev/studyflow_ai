@@ -13,7 +13,9 @@ abstract final class AppConstants {
 enum AiPromptType {
   chat('chat'),
   studyPlan('study_plan'),
-  explain('explain');
+  explain('explain'),
+  noteSummarize('note_summarize'),
+  noteQuiz('note_quiz');
 
   const AiPromptType(this.value);
   final String value;
