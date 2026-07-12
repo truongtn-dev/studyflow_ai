@@ -152,6 +152,7 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
       floatingActionButton: userId == null
           ? null
           : FloatingActionButton(
+              heroTag: 'fab_flashcards',
               onPressed: _add,
               backgroundColor: AppColors.primary,
               child: const Icon(Icons.add, color: Colors.white),

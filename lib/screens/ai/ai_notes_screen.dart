@@ -129,6 +129,7 @@ class _AiNotesScreenState extends State<AiNotesScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_ai_notes',
         onPressed: _openCreate,
         icon: const Icon(Icons.add),
         label: const Text('Thêm ghi chú'),

@@ -110,6 +110,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_tasks',
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.surface,
         onPressed: () async {

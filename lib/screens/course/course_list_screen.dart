@@ -98,6 +98,7 @@ class _CourseListScreenState extends State<CourseListScreen> {
       floatingActionButton: userId == null
           ? null
           : FloatingActionButton(
+              heroTag: 'fab_courses',
               onPressed: _openAdd,
               backgroundColor: AppColors.primary,
               child: const Icon(Icons.add, color: Colors.white),

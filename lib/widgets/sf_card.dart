@@ -19,25 +19,28 @@ class SfCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final content = Container(
-      width: double.infinity,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: color ?? (isDark ? AppColors.surfaceDark : AppColors.surface),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.surfaceDark : AppColors.divider,
-        ),
-      ),
-      child: child,
-    );
+    final bg = color ?? (isDark ? AppColors.surfaceDark : AppColors.surface);
+    final borderColor = isDark ? AppColors.surfaceDark : AppColors.divider;
 
-    if (onTap == null) return content;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
+    // Material (not DecoratedBox) so nested ListTile ink/splash is visible.
+    Widget content = Padding(padding: padding, child: child);
+    if (onTap != null) {
+      content = InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
+        child: content,
+      );
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: bg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: borderColor),
+        ),
+        clipBehavior: Clip.antiAlias,
         child: content,
       ),
     );
