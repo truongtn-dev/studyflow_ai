@@ -56,6 +56,17 @@ class AiProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setUserSession(int userId) async {
+    _userId = userId;
+    _error = null;
+    _messages.clear();
+    _studyPlanResult = null;
+    _explainResult = null;
+    await _refreshQuota();
+    await loadHistory();
+    notifyListeners();
+  }
+
   Future<void> _refreshQuota() async {
     _remainingQuota = await _quota.getRemaining(_userId);
   }

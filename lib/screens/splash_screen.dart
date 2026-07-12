@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/app_colors.dart';
+import '../utils/constants.dart';
+import 'auth/login_screen.dart';
+import 'auth/onboarding_screen.dart';
 import 'shell/main_shell.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,13 +18,29 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 1200), _goNext);
+    _bootstrap();
   }
 
-  void _goNext() {
+  Future<void> _bootstrap() async {
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenOnboarding =
+        prefs.getBool(AppConstants.hasSeenOnboardingKey) ?? false;
+    final sessionUserId = prefs.getInt(AppConstants.sessionUserIdKey);
+    if (!mounted) return;
+    _goNext(hasSeenOnboarding, sessionUserId != null);
+  }
+
+  void _goNext(bool hasSeenOnboarding, bool hasSession) {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainShell()),
+      MaterialPageRoute(
+        builder: (_) {
+          if (!hasSeenOnboarding) return const OnboardingScreen();
+          if (!hasSession) return const LoginScreen();
+          return const MainShell();
+        },
+      ),
     );
   }
 

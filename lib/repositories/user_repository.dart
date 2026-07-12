@@ -33,6 +33,17 @@ class UserRepository {
     return User.fromMap(maps.first);
   }
 
+  Future<User?> authenticate({
+    required String email,
+    required String password,
+  }) async {
+    final user = await findByEmail(email);
+    if (user == null || user.password != password) {
+      return null;
+    }
+    return user;
+  }
+
   Future<bool> emailExists(String email) async {
     final user = await findByEmail(email);
     return user != null;
