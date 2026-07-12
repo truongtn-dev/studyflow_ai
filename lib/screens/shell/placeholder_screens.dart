@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-
 import '../../theme/app_colors.dart';
 import '../../widgets/empty_state.dart';
+import 'package:studyflow_ai/screens/task/task_list_screen.dart' as task;
+import 'package:studyflow_ai/screens/study/pomodoro_screen.dart' as pomodoro;
 
 class PlaceholderTabScreen extends StatelessWidget {
   const PlaceholderTabScreen({
@@ -33,10 +34,8 @@ class TaskListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const PlaceholderTabScreen(
-      title: 'Công việc',
-      icon: Icons.task_alt_rounded,
-      assignee: 'Tuấn Huy',
+    return const task.TaskListScreen(
+      userId: 1,
     );
   }
 }
@@ -46,20 +45,7 @@ class PomodoroScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Focus')),
-      backgroundColor: AppColors.primaryContainer,
-      body: Center(
-        child: Text(
-          '25:00',
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontSize: 48,
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-      ),
-    );
+    return const pomodoro.PomodoroScreen();
   }
 }
 

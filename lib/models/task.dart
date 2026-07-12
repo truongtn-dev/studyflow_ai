@@ -63,4 +63,30 @@ class Task {
         progress: map['progress'] as int? ?? 0,
         createdAt: map['created_at'] as String? ?? '',
       );
+  // Thêm hàm này vào class Task
+  Task copyWith({
+    int? id,
+    int? userId,
+    int? courseId,
+    String? title,
+    String? description,
+    String? deadline,
+    TaskStatus? status,
+    TaskPriority? priority,
+    int? progress,
+    String? createdAt,
+  }) {
+    return Task(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      courseId: courseId ?? this.courseId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      deadline: deadline ?? this.deadline,
+      status: status ?? this.status,
+      priority: priority ?? this.priority,
+      progress: progress ?? this.progress,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
