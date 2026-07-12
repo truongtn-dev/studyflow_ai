@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/ai_cache_entry.dart';
 import '../models/chat_message.dart';
+import '../models/note_quiz_question.dart';
 import '../repositories/ai_cache_repository.dart';
 import '../repositories/course_repository.dart';
 import '../repositories/task_repository.dart';
@@ -260,6 +263,121 @@ class AiProvider extends ChangeNotifier {
       _loading = false;
       notifyListeners();
     }
+  }
+
+  /// Rút gọn nội dung ghi chú AI (trả về text mới; caller quyết định lưu).
+  Future<String?> summarizeAiNote({
+    required String title,
+    required String content,
+  }) async {
+    if (_loading) return null;
+    if (!await _canUseAi()) return null;
+    final uid = _userId!;
+
+    _error = null;
+    _loading = true;
+    notifyListeners();
+
+    try {
+      final key = '$title\n$content';
+      final hash =
+          AiCacheRepository.hashPrompt(AiPromptType.noteSummarize.value, key);
+      final cached = await _cache.findByHash(
+        userId: uid,
+        promptType: AiPromptType.noteSummarize.value,
+        promptHash: hash,
+      );
+
+      String result;
+      if (cached != null) {
+        result = cached.response;
+      } else {
+        result = await _groq.summarizeNote(title: title, content: content);
+        await _saveCache(
+          uid,
+          AiPromptType.noteSummarize.value,
+          hash,
+          result,
+        );
+        await _quota.increment(uid);
+        await _refreshQuota();
+      }
+      return result;
+    } catch (e) {
+      _error = e.toString().replaceFirst('StateError: ', '');
+      return null;
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Quiz ôn nhanh từ ghi chú — in-memory, không ghi bảng flashcards.
+  Future<List<NoteQuizQuestion>?> quizFromAiNote({
+    required String title,
+    required String content,
+  }) async {
+    if (_loading) return null;
+    if (!await _canUseAi()) return null;
+    final uid = _userId!;
+
+    _error = null;
+    _loading = true;
+    notifyListeners();
+
+    try {
+      final key = '$title\n$content';
+      final hash =
+          AiCacheRepository.hashPrompt(AiPromptType.noteQuiz.value, key);
+      final cached = await _cache.findByHash(
+        userId: uid,
+        promptType: AiPromptType.noteQuiz.value,
+        promptHash: hash,
+      );
+
+      String raw;
+      if (cached != null) {
+        raw = cached.response;
+      } else {
+        raw = await _groq.generateNoteQuizRaw(title: title, content: content);
+        await _saveCache(uid, AiPromptType.noteQuiz.value, hash, raw);
+        await _quota.increment(uid);
+        await _refreshQuota();
+      }
+      return _parseQuizQuestions(raw);
+    } catch (e) {
+      _error = e.toString().replaceFirst('StateError: ', '');
+      return null;
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  List<NoteQuizQuestion> _parseQuizQuestions(String raw) {
+    var text = raw.trim();
+    final fence = RegExp(r'```(?:json)?\s*([\s\S]*?)```');
+    final match = fence.firstMatch(text);
+    if (match != null) {
+      text = match.group(1)!.trim();
+    }
+    final start = text.indexOf('{');
+    final end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      text = text.substring(start, end + 1);
+    }
+
+    final decoded = jsonDecode(text) as Map<String, dynamic>;
+    final list = (decoded['questions'] as List?) ?? const [];
+    final questions = list
+        .whereType<Map>()
+        .map((e) => NoteQuizQuestion.fromJson(Map<String, dynamic>.from(e)))
+        .where((q) => q.question.trim().isNotEmpty)
+        .toList();
+    if (questions.isEmpty) {
+      throw StateError('AI không tạo được câu hỏi hợp lệ. Thử lại.');
+    }
+    return questions;
   }
 
   Future<void> loadHistory() async {

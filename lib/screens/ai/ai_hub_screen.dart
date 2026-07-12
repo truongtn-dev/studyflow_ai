@@ -36,7 +36,7 @@ class AiHubScreen extends StatelessWidget {
       _AiMenuItem(
         icon: Icons.bookmark_outline_rounded,
         title: 'Ghi chú AI',
-        subtitle: 'CRUD ghi chú học từ câu trả lời AI',
+        subtitle: 'CRUD · rút gọn AI · quiz ôn nhanh',
         screen: const AiNotesScreen(),
       ),
       _AiMenuItem(
