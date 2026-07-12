@@ -10,7 +10,11 @@ class AiCacheRepository {
 
   Future<int> insert(AiCacheEntry entry) async {
     final database = await _db.database;
-    return database.insert('ai_cache', entry.toMap());
+    final map = entry.toMap()..remove('id');
+    if ((map['created_at'] as String?)?.isEmpty ?? true) {
+      map.remove('created_at');
+    }
+    return database.insert('ai_cache', map);
   }
 
   Future<AiCacheEntry?> findByHash({

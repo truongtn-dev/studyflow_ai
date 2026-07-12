@@ -6,14 +6,28 @@ class CourseRepository {
 
   Future<int> insert(Course course) async {
     final database = await _db.database;
-    return database.insert('courses', course.toMap());
+    final map = course.toMap()..remove('id');
+    if ((map['created_at'] as String?)?.isEmpty ?? true) {
+      map.remove('created_at');
+    }
+    return database.insert('courses', map);
+  }
+
+  Future<int> countTasks(int courseId) async {
+    final database = await _db.database;
+    final result = await database.rawQuery(
+      'SELECT COUNT(*) as count FROM tasks WHERE course_id = ?',
+      [courseId],
+    );
+    return result.first['count'] as int? ?? 0;
   }
 
   Future<int> update(Course course) async {
     final database = await _db.database;
+    final map = course.toMap()..remove('id');
     return database.update(
       'courses',
-      course.toMap(),
+      map,
       where: 'id = ?',
       whereArgs: [course.id],
     );

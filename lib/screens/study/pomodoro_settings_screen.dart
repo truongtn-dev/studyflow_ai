@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/ui_helpers.dart';
 class PomodoroSettingsScreen extends StatefulWidget {
   const PomodoroSettingsScreen({super.key});
 
@@ -44,7 +45,7 @@ class _PomodoroSettingsScreenState extends State<PomodoroSettingsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: UiHelpers.scaffoldBg(context),
       appBar: AppBar(
         title: const Text("Cài đặt Pomodoro", style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,

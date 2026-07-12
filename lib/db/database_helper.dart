@@ -7,7 +7,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static const _dbName = 'studyflow.db';
-  static const _dbVersion = 1;
+  static const _dbVersion = 3;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -136,6 +136,9 @@ class DatabaseHelper {
       )
     ''');
 
+    await _createNotificationsTable(db);
+    await _createAiNotesTable(db);
+
     await db.execute(
       'CREATE INDEX idx_tasks_user_deadline ON tasks (user_id, deadline)',
     );
@@ -149,8 +152,54 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_courses_user ON courses (user_id)');
   }
 
+  Future<void> _createNotificationsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'info',
+        is_read INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id, created_at)',
+    );
+  }
+
+  Future<void> _createAiNotesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        course_id INTEGER,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT 'manual'
+          CHECK (source IN ('manual', 'chat', 'explain', 'study_plan', 'history')),
+        tags TEXT NOT NULL DEFAULT '',
+        is_pinned INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE SET NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_notes_user ON ai_notes (user_id, updated_at)',
+    );
+  }
+
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Future migrations go here.
+    if (oldVersion < 2) {
+      await _createNotificationsTable(db);
+    }
+    if (oldVersion < 3) {
+      await _createAiNotesTable(db);
+    }
   }
 
   Future<void> close() async {

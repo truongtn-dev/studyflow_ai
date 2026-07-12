@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../providers/auth_provider.dart';
+import '../services/achievement_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/constants.dart';
 import 'auth/login_screen.dart';
@@ -26,9 +29,17 @@ class _SplashScreenState extends State<SplashScreen> {
     final prefs = await SharedPreferences.getInstance();
     final hasSeenOnboarding =
         prefs.getBool(AppConstants.hasSeenOnboardingKey) ?? false;
-    final sessionUserId = prefs.getInt(AppConstants.sessionUserIdKey);
     if (!mounted) return;
-    _goNext(hasSeenOnboarding, sessionUserId != null);
+    final auth = context.read<AuthProvider>();
+    if (!auth.isLoading && auth.user == null) {
+      await auth.loadSession();
+    }
+    if (auth.userId != null) {
+      await AchievementService().applyStreakDecay(auth.userId!);
+      await auth.refreshUser();
+    }
+    if (!mounted) return;
+    _goNext(hasSeenOnboarding, auth.isLoggedIn);
   }
 
   void _goNext(bool hasSeenOnboarding, bool hasSession) {
@@ -59,7 +70,11 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(Icons.school_rounded, size: 48, color: AppColors.primary),
+              child: const Icon(
+                Icons.school_rounded,
+                size: 48,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(height: 20),
             Text(

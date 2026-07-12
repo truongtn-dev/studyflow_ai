@@ -6,8 +6,39 @@ import '../../theme/app_colors.dart';
 import '../../utils/constants.dart';
 import '../../widgets/sf_card.dart';
 
-class AiSettingsScreen extends StatelessWidget {
+class AiSettingsScreen extends StatefulWidget {
   const AiSettingsScreen({super.key});
+
+  @override
+  State<AiSettingsScreen> createState() => _AiSettingsScreenState();
+}
+
+class _AiSettingsScreenState extends State<AiSettingsScreen> {
+  final _keyController = TextEditingController();
+  bool _obscure = true;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _keyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    await context.read<AiProvider>().saveApiKey(_keyController.text);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _keyController.text.trim().isEmpty
+              ? 'Đã xóa API key'
+              : 'Đã lưu API key — chạy flutter run bình thường là được',
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,9 +79,73 @@ class AiSettingsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text('Groq API Key', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Text(
+                      ai.hasApiKey
+                          ? 'Đã cấu hình — có thể chạy app bình thường, không cần --dart-define.'
+                          : 'Dán key một lần. App lưu trên máy, lần sau flutter run là dùng được.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _keyController,
+                      obscureText: _obscure,
+                      decoration: InputDecoration(
+                        hintText: 'gsk_...',
+                        labelText: 'API Key',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
+                          onPressed: () => setState(() => _obscure = !_obscure),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _saving ? null : _save,
+                            icon: _saving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.save_outlined),
+                            label: const Text('Lưu key'),
+                          ),
+                        ),
+                        if (ai.hasApiKey) ...[
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: _saving
+                                ? null
+                                : () async {
+                                    _keyController.clear();
+                                    await context.read<AiProvider>().saveApiKey('');
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Đã xóa API key')),
+                                    );
+                                  },
+                            child: const Text('Xóa'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SfCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     _InfoRow(
                       icon: Icons.key_rounded,
-                      title: 'API Key',
+                      title: 'Trạng thái',
                       value: ai.hasApiKey ? 'Đã cấu hình' : 'Chưa cấu hình',
                       valueColor: ai.hasApiKey ? AppColors.secondary : AppColors.error,
                     ),
@@ -74,14 +169,13 @@ class AiSettingsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Hướng dẫn cấu hình', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Hướng dẫn', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
                     const Text(
-                      '1. Lấy API key miễn phí tại console.groq.com/keys\n'
-                      '2. Thêm vào secrets.json:\n'
-                      '   "GROQ_KEY": "gsk_..."\n'
-                      '3. Chạy: flutter run --dart-define-from-file=secrets.json\n'
-                      '4. Không commit API key lên GitHub',
+                      '1. Lấy key miễn phí tại console.groq.com/keys\n'
+                      '2. Dán vào ô phía trên → Lưu key\n'
+                      '3. Chạy bình thường: flutter run (không cần secrets.json)\n'
+                      '4. Key lưu trên máy, không commit lên GitHub',
                     ),
                   ],
                 ),

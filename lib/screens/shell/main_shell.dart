@@ -24,9 +24,9 @@ class _MainShellState extends State<MainShell> {
 
   final _screens = const [
     DashboardScreen(),
-    TaskListScreen(),
-    PomodoroScreen(),
-    FlashcardListScreen(),
+    TasksTab(),
+    FocusTab(),
+    CardsTab(),
     ProfileScreen(),
   ];
 

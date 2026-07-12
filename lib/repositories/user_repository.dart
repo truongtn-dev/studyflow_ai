@@ -6,7 +6,11 @@ class UserRepository {
 
   Future<int> insert(User user) async {
     final database = await _db.database;
-    return database.insert('users', user.toMap());
+    final map = user.toMap()..remove('id');
+    if ((map['created_at'] as String?)?.isEmpty ?? true) {
+      map.remove('created_at');
+    }
+    return database.insert('users', map);
   }
 
   Future<User?> findByEmail(String email) async {
@@ -47,5 +51,16 @@ class UserRepository {
   Future<bool> emailExists(String email) async {
     final user = await findByEmail(email);
     return user != null;
+  }
+
+  Future<int> update(User user) async {
+    final database = await _db.database;
+    final map = user.toMap()..remove('id');
+    return database.update(
+      'users',
+      map,
+      where: 'id = ?',
+      whereArgs: [user.id],
+    );
   }
 }

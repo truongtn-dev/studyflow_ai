@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/ai_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_colors.dart';
-import '../../utils/constants.dart';
 import '../../widgets/sf_button.dart';
 import '../../widgets/sf_card.dart';
 import '../ai/ai_settings_screen.dart';
 import '../auth/login_screen.dart';
+import '../course/backup_screen.dart';
+import '../course/course_list_screen.dart';
+import '../home/achievements_screen.dart';
+import '../home/statistics_screen.dart';
+import '../home/theme_settings_screen.dart';
+import '../notifications/notification_center_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -17,173 +22,45 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(28, 28, 28, 26),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 32,
-                offset: const Offset(0, 18),
-              ),
-            ],
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Đăng xuất?'),
+        content: const Text('Bạn có chắc muốn đăng xuất khỏi StudyFlow AI?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Hủy'),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 118,
-                    height: 118,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColors.primary.withValues(alpha: 0.14),
-                          AppColors.primary.withValues(alpha: 0.04),
-                        ],
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.logout_rounded,
-                      size: 58,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    bottom: 10,
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF4D73),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.priority_high_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-              Text(
-                'Đăng xuất?',
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Bạn có chắc chắn muốn đăng xuất khỏi StudyFlow AI không?',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 15,
-                      height: 1.6,
-                      color: AppColors.textSecondary,
-                    ),
-              ),
-              const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(false),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        side: BorderSide(
-                          color: AppColors.primary.withValues(alpha: 0.2),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                      ),
-                      child: const Text(
-                        'Hủy',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF6A63FF), AppColors.primary],
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.22),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: FilledButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(true),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                        child: const Text(
-                          'Đăng xuất',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Đăng xuất'),
           ),
-        ),
+        ],
       ),
     );
 
     if (confirmed == true && context.mounted) {
-      await _logout(context);
+      await context.read<AuthProvider>().logout();
+      if (!context.mounted) return;
+      await context.read<AiProvider>().clearSession();
+      if (!context.mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
     }
   }
 
-  Future<void> _logout(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(AppConstants.sessionUserIdKey);
-    if (!context.mounted) return;
-    await context.read<AiProvider>().setUserSession(1);
-    if (!context.mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return 'SF';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return (parts.first[0] + parts.last[0]).toUpperCase();
   }
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final user = auth.user;
     final themeProvider = context.watch<ThemeProvider>();
 
     return Scaffold(
@@ -197,9 +74,9 @@ class ProfileScreen extends StatelessWidget {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: AppColors.primaryContainer,
-                  child: const Text(
-                    'SF',
-                    style: TextStyle(
+                  child: Text(
+                    _initials(user?.name ?? 'SF'),
+                    style: const TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -207,48 +84,118 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'StudyFlow User',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text(
-                      'user@fpt.edu.vn',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user?.name ?? 'StudyFlow User',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text(
+                        user?.email ?? 'user@fpt.edu.vn',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Streak ${user?.streak ?? 0} · XP ${user?.xp ?? 0}',
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: AppColors.secondary,
+                            ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
           SfCard(
-            child: SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Chế độ tối'),
-              subtitle: const Text('Dark mode'),
-              value: themeProvider.isDark,
-              onChanged: (_) => themeProvider.toggle(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SfCard(
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.auto_awesome, color: AppColors.primary),
-              title: const Text('AI Quota & Settings'),
-              subtitle: Text(
-                'Còn ${context.watch<AiProvider>().remainingQuota} lượt hôm nay',
-              ),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AiSettingsScreen()),
-              ),
+            child: Column(
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.menu_book_outlined, color: AppColors.primary),
+                  title: const Text('Môn học'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CourseListScreen()),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.emoji_events_outlined, color: AppColors.accent),
+                  title: const Text('Huy hiệu'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AchievementsScreen()),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.bar_chart_rounded, color: AppColors.secondary),
+                  title: const Text('Thống kê'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const StatisticsScreen()),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.notifications_outlined),
+                  title: const Text('Trung tâm thông báo'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationCenterScreen()),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.backup_outlined),
+                  title: const Text('Backup & Restore'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BackupScreen()),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.palette_outlined),
+                  title: const Text('Giao diện'),
+                  subtitle: Text(themeProvider.isDark ? 'Dark mode' : 'Light mode'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ThemeSettingsScreen()),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.auto_awesome, color: AppColors.primary),
+                  title: const Text('AI Quota & Settings'),
+                  subtitle: Text(
+                    'Còn ${context.watch<AiProvider>().remainingQuota} lượt hôm nay',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AiSettingsScreen()),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
