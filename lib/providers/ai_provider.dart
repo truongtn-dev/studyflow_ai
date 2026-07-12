@@ -50,11 +50,37 @@ class AiProvider extends ChangeNotifier {
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
+    await _loadApiKey(prefs);
     _userId = prefs.getInt(AppConstants.sessionUserIdKey);
     if (_userId != null) {
       await _refreshQuota();
       await loadHistory();
     }
+    notifyListeners();
+  }
+
+  Future<void> _loadApiKey(SharedPreferences prefs) async {
+    const compileTimeKey =
+        String.fromEnvironment(AppConstants.groqKeyEnv);
+    var key = prefs.getString(AppConstants.groqKeyPrefsKey)?.trim() ?? '';
+    if (key.isEmpty && compileTimeKey.isNotEmpty) {
+      key = compileTimeKey.trim();
+      await prefs.setString(AppConstants.groqKeyPrefsKey, key);
+    }
+    _groq.updateApiKey(key);
+  }
+
+  /// Save Groq key locally so plain `flutter run` works (no --dart-define).
+  Future<void> saveApiKey(String key) async {
+    final trimmed = key.trim();
+    final prefs = await SharedPreferences.getInstance();
+    if (trimmed.isEmpty) {
+      await prefs.remove(AppConstants.groqKeyPrefsKey);
+    } else {
+      await prefs.setString(AppConstants.groqKeyPrefsKey, trimmed);
+    }
+    _groq.updateApiKey(trimmed);
+    _error = null;
     notifyListeners();
   }
 
@@ -98,7 +124,7 @@ class AiProvider extends ChangeNotifier {
 
     if (!_groq.hasApiKey) {
       _error =
-          'Chưa cấu hình GROQ_KEY. Lấy key miễn phí tại console.groq.com/keys';
+          'Chưa cấu hình GROQ_KEY. Vào AI Hub → AI Quota để dán key (console.groq.com/keys).';
       notifyListeners();
       return false;
     }

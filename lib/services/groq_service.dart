@@ -8,15 +8,19 @@ import '../utils/constants.dart';
 
 class GroqService {
   GroqService({String? apiKey, http.Client? client})
-      : _apiKey = apiKey ?? const String.fromEnvironment(AppConstants.groqKeyEnv),
+      : _apiKey = (apiKey ?? const String.fromEnvironment(AppConstants.groqKeyEnv)).trim(),
         _client = client ?? http.Client();
 
   static const _baseUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
-  final String _apiKey;
+  String _apiKey;
   final http.Client _client;
 
   bool get hasApiKey => _apiKey.isNotEmpty;
+
+  void updateApiKey(String? key) {
+    _apiKey = (key ?? '').trim();
+  }
 
   Future<String> chat(String message) async {
     _ensureApiKey();
@@ -115,7 +119,7 @@ Khi giải thích lập trình (Dart/Flutter, Java, SQL...), luôn kèm ví dụ
     }
 
     if (response.statusCode == 401) {
-      return 'Groq API key không hợp lệ. Kiểm tra GROQ_KEY trong secrets.json';
+      return 'Groq API key không hợp lệ. Vào AI Hub → AI Quota để cập nhật key.';
     }
 
     try {
@@ -169,8 +173,8 @@ Khi giải thích lập trình (Dart/Flutter, Java, SQL...), luôn kèm ví dụ
   void _ensureApiKey() {
     if (_apiKey.isEmpty) {
       throw StateError(
-        'Chưa cấu hình GROQ_KEY. Chạy app với:\n'
-        'flutter run --dart-define-from-file=secrets.json',
+        'Chưa cấu hình GROQ_KEY.\n'
+        'Vào AI Hub → AI Quota và dán key từ console.groq.com/keys',
       );
     }
   }
