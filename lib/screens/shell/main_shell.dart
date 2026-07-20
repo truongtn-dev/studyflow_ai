@@ -32,6 +32,38 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+
+    if (isLandscape) {
+      return Scaffold(
+        body: SafeArea(
+          child: Row(
+            children: [
+              NavigationRail(
+                selectedIndex: _index,
+                onDestinationSelected: (i) => setState(() => _index = i),
+                labelType: NavigationRailLabelType.all,
+                indicatorColor: const Color(0xFF5B5FEF),
+                destinations: [
+                  for (final tab in _tabs)
+                    NavigationRailDestination(
+                      icon: Icon(tab.icon),
+                      selectedIcon: Icon(tab.selectedIcon),
+                      label: Text(tab.label),
+                    ),
+                ],
+              ),
+              const VerticalDivider(width: 1, thickness: 1),
+              Expanded(
+                child: IndexedStack(index: _index, children: _screens),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: IndexedStack(index: _index, children: _screens),
       bottomNavigationBar: NavigationBar(
