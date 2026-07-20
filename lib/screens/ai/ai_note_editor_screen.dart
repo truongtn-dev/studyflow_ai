@@ -119,6 +119,11 @@ class _AiNoteEditorScreenState extends State<AiNoteEditorScreen> {
         ),
       );
       Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không lưu được ghi chú: $e')),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
