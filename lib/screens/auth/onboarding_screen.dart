@@ -110,101 +110,106 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 8),
-                        _IllustrationStage(imagePath: item.imagePath),
-                        const SizedBox(height: 18),
-                        _Headline(
-                          title: item.title,
-                          highlightedWord: item.highlightedWord,
-                        ),
-                        const SizedBox(height: 14),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 18),
-                          child: Text(
-                            item.description,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  height: 1.7,
-                                  fontSize: 15,
-                                  color: AppColors.textSecondary,
-                                ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Row(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final landscape =
+                            constraints.maxWidth > constraints.maxHeight;
+                        final actions = _OnboardingActions(
+                          isLastPage: _isLastPage,
+                          pageCount: _items.length,
+                          currentIndex: _currentIndex,
+                          onSkip: _completeOnboarding,
+                          onNext: _nextPage,
+                          onStart: _completeOnboarding,
+                        );
+
+                        if (landscape) {
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              TextButton(
-                                onPressed: _completeOnboarding,
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                                ),
-                                child: Text(
-                                  'Bỏ qua',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        color: AppColors.textSecondary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                              Expanded(
+                                flex: 5,
+                                child: _IllustrationStage(
+                                  imagePath: item.imagePath,
+                                  height: constraints.maxHeight - 16,
                                 ),
                               ),
-                              const Spacer(),
-                              _DotsIndicator(
-                                count: _items.length,
-                                currentIndex: _currentIndex,
-                              ),
-                              const Spacer(),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 220),
-                                child: _isLastPage
-                                    ? SizedBox(
-                                        key: const ValueKey('start'),
-                                        height: 56,
-                                        child: FilledButton(
-                                          onPressed: _completeOnboarding,
-                                          style: FilledButton.styleFrom(
-                                            elevation: 0,
-                                            backgroundColor: AppColors.primary,
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 34,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(999),
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'Bắt đầu',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    : SizedBox(
-                                        key: const ValueKey('next'),
-                                        width: 60,
-                                        height: 60,
-                                        child: FilledButton(
-                                          onPressed: _nextPage,
-                                          style: FilledButton.styleFrom(
-                                            elevation: 0,
-                                            padding: EdgeInsets.zero,
-                                            shape: const CircleBorder(),
-                                          ),
-                                          child: const Icon(
-                                            Icons.arrow_forward_rounded,
-                                            size: 25,
-                                          ),
-                                        ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                flex: 5,
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      _Headline(
+                                        title: item.title,
+                                        highlightedWord: item.highlightedWord,
                                       ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        item.description,
+                                        textAlign: TextAlign.center,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              height: 1.6,
+                                              fontSize: 14,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 18),
+                                      actions,
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
-                          ),
-                        ),
-                      ],
+                          );
+                        }
+
+                        final illusH =
+                            (constraints.maxHeight * 0.42).clamp(140.0, 320.0);
+                        return Column(
+                          children: [
+                            const SizedBox(height: 4),
+                            _IllustrationStage(
+                              imagePath: item.imagePath,
+                              height: illusH,
+                            ),
+                            const SizedBox(height: 12),
+                            _Headline(
+                              title: item.title,
+                              highlightedWord: item.highlightedWord,
+                            ),
+                            const SizedBox(height: 10),
+                            Flexible(
+                              child: SingleChildScrollView(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  child: Text(
+                                    item.description,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          height: 1.7,
+                                          fontSize: 15,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            actions,
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -218,14 +223,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class _IllustrationStage extends StatelessWidget {
-  const _IllustrationStage({required this.imagePath});
+  const _IllustrationStage({
+    required this.imagePath,
+    this.height = 280,
+  });
 
   final String imagePath;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 350,
+      height: height,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -245,55 +254,106 @@ class _IllustrationStage extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 18,
-            left: 14,
-            right: 14,
-            bottom: 24,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(26),
-                gradient: RadialGradient(
-                  center: const Alignment(0, -0.12),
-                  radius: 0.9,
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.12),
-                    AppColors.primary.withValues(alpha: 0.04),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
             top: 12,
             left: 8,
             right: 8,
             bottom: 0,
-            child: Column(
-              children: [
-                Expanded(
-                  child: Image.asset(
-                    imagePath,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                  ),
-                ),
-                Container(
-                  width: 220,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.14),
-                        blurRadius: 34,
-                        spreadRadius: 10,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            child: Image.asset(
+              imagePath,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OnboardingActions extends StatelessWidget {
+  const _OnboardingActions({
+    required this.isLastPage,
+    required this.pageCount,
+    required this.currentIndex,
+    required this.onSkip,
+    required this.onNext,
+    required this.onStart,
+  });
+
+  final bool isLastPage;
+  final int pageCount;
+  final int currentIndex;
+  final VoidCallback onSkip;
+  final VoidCallback onNext;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          TextButton(
+            onPressed: onSkip,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            child: Text(
+              'Bỏ qua',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+          ),
+          const Spacer(),
+          _DotsIndicator(
+            count: pageCount,
+            currentIndex: currentIndex,
+          ),
+          const Spacer(),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: isLastPage
+                ? SizedBox(
+                    key: const ValueKey('start'),
+                    height: 56,
+                    child: FilledButton(
+                      onPressed: onStart,
+                      style: FilledButton.styleFrom(
+                        elevation: 0,
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      child: const Text(
+                        'Bắt đầu',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  )
+                : SizedBox(
+                    key: const ValueKey('next'),
+                    width: 56,
+                    height: 56,
+                    child: FilledButton(
+                      onPressed: onNext,
+                      style: FilledButton.styleFrom(
+                        elevation: 0,
+                        padding: EdgeInsets.zero,
+                        shape: const CircleBorder(),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 24,
+                      ),
+                    ),
+                  ),
           ),
         ],
       ),

@@ -142,86 +142,115 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
           )
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                const SizedBox(
-                  width: 240,
-                  height: 240,
-                  child: CircularProgressIndicator(
-                    value: 1.0,
-                    strokeWidth: 12,
-                    color: AppColors.divider,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final short = constraints.maxHeight < 520;
+          final size = short ? 160.0 : 240.0;
+          final fontSize = short ? 36.0 : 56.0;
+          final gap = short ? 20.0 : 50.0;
+
+          final timer = Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: size,
+                height: size,
+                child: const CircularProgressIndicator(
+                  value: 1.0,
+                  strokeWidth: 12,
+                  color: AppColors.divider,
+                ),
+              ),
+              SizedBox(
+                width: size,
+                height: size,
+                child: CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 12,
+                  color: _isBreak ? AppColors.secondary : AppColors.primary,
+                  strokeCap: StrokeCap.round,
+                ),
+              ),
+              Text(
+                '${(_remainingSeconds ~/ 60).toString().padLeft(2, '0')}:${(_remainingSeconds % 60).toString().padLeft(2, '0')}',
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          );
+
+          final controls = Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _toggleTimer,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.surface,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                SizedBox(
-                  width: 240,
-                  height: 240,
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    strokeWidth: 12,
-                    color: _isBreak ? AppColors.secondary : AppColors.primary,
-                    strokeCap: StrokeCap.round,
-                  ),
+                icon: Icon(_isRunning ? Icons.pause : Icons.play_arrow),
+                label: Text(
+                  _isRunning ? 'TẠM DỪNG' : 'BẮT ĐẦU',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text(
-                  '${(_remainingSeconds ~/ 60).toString().padLeft(2, '0')}:${(_remainingSeconds % 60).toString().padLeft(2, '0')}',
-                  style: const TextStyle(
-                    fontSize: 56,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+              ),
+              const SizedBox(width: 20),
+              Container(
+                decoration: const BoxDecoration(
+                  color: AppColors.divider,
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
-            const SizedBox(height: 50),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _toggleTimer,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.surface,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  icon: Icon(_isRunning ? Icons.pause : Icons.play_arrow),
-                  label: Text(
-                    _isRunning ? 'TẠM DỪNG' : 'BẮT ĐẦU',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                child: IconButton(
+                  onPressed: () {
+                    _timer?.cancel();
+                    setState(() {
+                      _isRunning = false;
+                      _sessionStartedAt = null;
+                      _remainingSeconds = _totalSeconds;
+                    });
+                  },
+                  icon: const Icon(Icons.refresh),
+                  color: AppColors.primary,
                 ),
-                const SizedBox(width: 20),
-                Container(
-                  decoration: const BoxDecoration(
-                    color: AppColors.divider,
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    onPressed: () {
-                      _timer?.cancel();
-                      setState(() {
-                        _isRunning = false;
-                        _sessionStartedAt = null;
-                        _remainingSeconds = _totalSeconds;
-                      });
-                    },
-                    icon: const Icon(Icons.refresh),
-                    color: AppColors.primary,
-                  ),
+              ),
+            ],
+          );
+
+          final content = short
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    timer,
+                    const SizedBox(width: 28),
+                    Flexible(child: controls),
+                  ],
                 )
-              ],
-            )
-          ],
-        ),
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    timer,
+                    SizedBox(height: gap),
+                    controls,
+                  ],
+                );
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight - 24),
+              child: Center(child: content),
+            ),
+          );
+        },
       ),
     );
   }
