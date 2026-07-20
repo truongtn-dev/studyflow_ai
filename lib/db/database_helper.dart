@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 class DatabaseHelper {
   DatabaseHelper._();
@@ -8,15 +10,27 @@ class DatabaseHelper {
   static Database? _database;
   static const _dbName = 'studyflow.db';
   static const _dbVersion = 4;
+  static bool _factoryReady = false;
+
+  /// Call once before opening the database (required on web).
+  static void ensureFactory() {
+    if (_factoryReady) return;
+    if (kIsWeb) {
+      databaseFactory = databaseFactoryFfiWeb;
+    }
+    _factoryReady = true;
+  }
 
   Future<Database> get database async {
+    ensureFactory();
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
   }
 
   Future<Database> _initDatabase() async {
-    final dbPath = join(await getDatabasesPath(), _dbName);
+    // Web IndexedDB path is just the file name; mobile/desktop uses app data dir.
+    final dbPath = kIsWeb ? _dbName : join(await getDatabasesPath(), _dbName);
     return openDatabase(
       dbPath,
       version: _dbVersion,

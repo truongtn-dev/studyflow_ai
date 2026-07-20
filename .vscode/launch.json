@@ -8,10 +8,27 @@
       "program": "lib/main.dart"
     },
     {
+      "name": "studyflow_ai (Chrome)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "chrome"
+    },
+    {
       "name": "studyflow_ai (secrets.json)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=secrets.json"
+      ]
+    },
+    {
+      "name": "studyflow_ai (Chrome + secrets)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "chrome",
       "toolArgs": [
         "--dart-define-from-file=secrets.json"
       ]

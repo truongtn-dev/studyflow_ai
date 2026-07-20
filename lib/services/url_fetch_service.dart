@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
 /// Fetches a public web page and extracts plain text for AI summarization.
@@ -24,6 +25,12 @@ class UrlFetchService {
           )
           .timeout(_timeout);
     } catch (e) {
+      if (kIsWeb) {
+        throw StateError(
+          'Trình duyệt chặn tải link (CORS). '
+          'Trên Web hãy dùng Wikipedia/sample, hoặc chạy app trên Android/Windows để fetch tự do.\n$e',
+        );
+      }
       throw StateError(
         'Không tải được link. Kiểm tra mạng hoặc thử URL khác.\n$e',
       );
