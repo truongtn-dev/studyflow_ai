@@ -7,7 +7,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static const _dbName = 'studyflow.db';
-  static const _dbVersion = 3;
+  static const _dbVersion = 4;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -179,7 +179,7 @@ class DatabaseHelper {
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         source TEXT NOT NULL DEFAULT 'manual'
-          CHECK (source IN ('manual', 'chat', 'explain', 'study_plan', 'history')),
+          CHECK (source IN ('manual', 'chat', 'explain', 'study_plan', 'history', 'link')),
         tags TEXT NOT NULL DEFAULT '',
         is_pinned INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -200,6 +200,45 @@ class DatabaseHelper {
     if (oldVersion < 3) {
       await _createAiNotesTable(db);
     }
+    if (oldVersion < 4) {
+      await _migrateAiNotesAllowLinkSource(db);
+    }
+  }
+
+  /// SQLite cannot ALTER CHECK — rebuild ai_notes to allow source='link'.
+  Future<void> _migrateAiNotesAllowLinkSource(Database db) async {
+    await db.execute('ALTER TABLE ai_notes RENAME TO ai_notes_old');
+    await db.execute('''
+      CREATE TABLE ai_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        course_id INTEGER,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT 'manual'
+          CHECK (source IN ('manual', 'chat', 'explain', 'study_plan', 'history', 'link')),
+        tags TEXT NOT NULL DEFAULT '',
+        is_pinned INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE SET NULL
+      )
+    ''');
+    await db.execute('''
+      INSERT INTO ai_notes (
+        id, user_id, course_id, title, content, source, tags,
+        is_pinned, created_at, updated_at
+      )
+      SELECT
+        id, user_id, course_id, title, content, source, tags,
+        is_pinned, created_at, updated_at
+      FROM ai_notes_old
+    ''');
+    await db.execute('DROP TABLE ai_notes_old');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_notes_user ON ai_notes (user_id, updated_at)',
+    );
   }
 
   Future<void> close() async {

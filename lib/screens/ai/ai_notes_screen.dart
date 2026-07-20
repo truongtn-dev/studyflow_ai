@@ -88,6 +88,8 @@ class _AiNotesScreenState extends State<AiNotesScreen> {
         return 'Study plan';
       case 'history':
         return 'History';
+      case 'link':
+        return 'Link';
       default:
         return 'Thủ công';
     }

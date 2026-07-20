@@ -5,6 +5,7 @@ import '../../widgets/sf_card.dart';
 import 'ai_coach_screen.dart';
 import 'ai_explain_screen.dart';
 import 'ai_history_screen.dart';
+import 'ai_link_summarize_screen.dart';
 import 'ai_notes_screen.dart';
 import 'ai_settings_screen.dart';
 import 'ai_study_plan_screen.dart';
@@ -32,6 +33,12 @@ class AiHubScreen extends StatelessWidget {
         title: 'Giải thích concept',
         subtitle: 'Provider, SQLite, async...',
         screen: const AiExplainScreen(),
+      ),
+      _AiMenuItem(
+        icon: Icons.link_rounded,
+        title: 'Tóm tắt link',
+        subtitle: 'REST fetch URL + Groq tóm tắt',
+        screen: const AiLinkSummarizeScreen(),
       ),
       _AiMenuItem(
         icon: Icons.bookmark_outline_rounded,
