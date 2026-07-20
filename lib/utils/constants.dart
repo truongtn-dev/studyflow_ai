@@ -15,7 +15,8 @@ enum AiPromptType {
   studyPlan('study_plan'),
   explain('explain'),
   noteSummarize('note_summarize'),
-  noteQuiz('note_quiz');
+  noteQuiz('note_quiz'),
+  linkSummarize('link_summarize');
 
   const AiPromptType(this.value);
   final String value;

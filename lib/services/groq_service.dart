@@ -120,6 +120,30 @@ $content
     );
   }
 
+  /// Tóm tắt nội dung trang web đã fetch (REST + AI).
+  Future<String> summarizeWebPage({
+    required String url,
+    required String pageText,
+  }) async {
+    _ensureApiKey();
+    final prompt = '''
+Tóm tắt nội dung trang web học tập sau cho sinh viên FPT.
+Yêu cầu:
+- Tiếng Việt, bullet ngắn, dễ đọc trên mobile
+- Nêu 5–10 ý chính
+- Nếu có định nghĩa / bước làm / code quan trọng thì giữ lại
+- Cuối cùng thêm mục "Gợi ý học" (1–2 câu)
+
+URL nguồn: $url
+
+Nội dung trang (đã rút gọn thô):
+$pageText
+''';
+    return _withRetry(
+      () => _chatCompletion(systemPrompt: _systemPrompt, userPrompt: prompt),
+    );
+  }
+
   static const _systemPrompt = '''
 Bạn là AI Coach của app StudyFlow AI, hỗ trợ sinh viên FPT University học tập (PRM393, PRO192, MOB1023...).
 Trả lời tiếng Việt, ngắn gọn, thực tế.

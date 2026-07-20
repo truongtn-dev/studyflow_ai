@@ -11,6 +11,7 @@ import '../repositories/course_repository.dart';
 import '../repositories/task_repository.dart';
 import '../services/ai_quota_service.dart';
 import '../services/groq_service.dart';
+import '../services/url_fetch_service.dart';
 import '../utils/constants.dart';
 
 class AiProvider extends ChangeNotifier {
@@ -20,17 +21,20 @@ class AiProvider extends ChangeNotifier {
     AiQuotaService? quotaService,
     CourseRepository? courseRepository,
     TaskRepository? taskRepository,
+    UrlFetchService? urlFetchService,
   })  : _groq = groqService ?? GroqService(),
         _cache = cacheRepository ?? AiCacheRepository(),
         _quota = quotaService ?? AiQuotaService(),
         _courses = courseRepository ?? CourseRepository(),
-        _tasks = taskRepository ?? TaskRepository();
+        _tasks = taskRepository ?? TaskRepository(),
+        _urlFetch = urlFetchService ?? UrlFetchService();
 
   final GroqService _groq;
   final AiCacheRepository _cache;
   final AiQuotaService _quota;
   final CourseRepository _courses;
   final TaskRepository _tasks;
+  final UrlFetchService _urlFetch;
 
   int? _userId;
   bool _loading = false;
@@ -38,6 +42,8 @@ class AiProvider extends ChangeNotifier {
   final List<ChatMessage> _messages = [];
   String? _studyPlanResult;
   String? _explainResult;
+  String? _linkSummaryResult;
+  String? _lastSummarizedUrl;
   List<AiCacheEntry> _history = [];
   int _remainingQuota = AppConstants.maxAiRequestsPerDay;
 
@@ -47,6 +53,8 @@ class AiProvider extends ChangeNotifier {
   List<ChatMessage> get messages => List.unmodifiable(_messages);
   String? get studyPlanResult => _studyPlanResult;
   String? get explainResult => _explainResult;
+  String? get linkSummaryResult => _linkSummaryResult;
+  String? get lastSummarizedUrl => _lastSummarizedUrl;
   List<AiCacheEntry> get history => List.unmodifiable(_history);
   int get remainingQuota => _remainingQuota;
   bool get hasApiKey => _groq.hasApiKey;
@@ -93,6 +101,8 @@ class AiProvider extends ChangeNotifier {
     _messages.clear();
     _studyPlanResult = null;
     _explainResult = null;
+    _linkSummaryResult = null;
+    _lastSummarizedUrl = null;
     await _refreshQuota();
     await loadHistory();
     notifyListeners();
@@ -104,6 +114,8 @@ class AiProvider extends ChangeNotifier {
     _messages.clear();
     _studyPlanResult = null;
     _explainResult = null;
+    _linkSummaryResult = null;
+    _lastSummarizedUrl = null;
     _history = [];
     _remainingQuota = AppConstants.maxAiRequestsPerDay;
     notifyListeners();
@@ -348,6 +360,63 @@ class AiProvider extends ChangeNotifier {
     } catch (e) {
       _error = e.toString().replaceFirst('StateError: ', '');
       return null;
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Fetch trang web (REST) rồi tóm tắt bằng Groq → lưu được vào Ghi chú AI.
+  Future<void> summarizeLink(String rawUrl) async {
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty || _loading) return;
+    if (!await _canUseAi()) return;
+    final uid = _userId!;
+
+    _error = null;
+    _loading = true;
+    _linkSummaryResult = null;
+    _lastSummarizedUrl = null;
+    notifyListeners();
+
+    try {
+      final page = await _urlFetch.fetchText(trimmed);
+      final cacheKey = '${page.url}|${page.text.length}|${page.text.hashCode}';
+      final hash = AiCacheRepository.hashPrompt(
+        AiPromptType.linkSummarize.value,
+        cacheKey,
+      );
+      final cached = await _cache.findByHash(
+        userId: uid,
+        promptType: AiPromptType.linkSummarize.value,
+        promptHash: hash,
+      );
+
+      String summary;
+      if (cached != null) {
+        summary = cached.response;
+      } else {
+        summary = await _groq.summarizeWebPage(
+          url: page.url,
+          pageText: page.text,
+        );
+        await _saveCache(
+          uid,
+          AiPromptType.linkSummarize.value,
+          hash,
+          summary,
+        );
+        await _quota.increment(uid);
+        await _refreshQuota();
+      }
+
+      final suffix = page.truncated
+          ? '\n\n_Nguồn đã cắt bớt vì trang dài (${page.charCount} ký tự)._'
+          : '';
+      _linkSummaryResult = '$summary$suffix';
+      _lastSummarizedUrl = page.url;
+    } catch (e) {
+      _error = e.toString().replaceFirst('StateError: ', '');
     } finally {
       _loading = false;
       notifyListeners();
