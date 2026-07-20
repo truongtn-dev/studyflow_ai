@@ -76,6 +76,15 @@ class TaskRepository {
     }
   }
   Future<int> insert(Task task) async {
+    final deadline = DateTime.tryParse(task.deadline);
+    if (deadline != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final day = DateTime(deadline.year, deadline.month, deadline.day);
+      if (day.isBefore(today) && task.status != TaskStatus.overdue) {
+        throw StateError('Deadline không được ở quá khứ (BR-02).');
+      }
+    }
     final database = await _db.database;
     final map = task.toMap()..remove('id');
     if ((map['created_at'] as String?)?.isEmpty ?? true) {
@@ -85,6 +94,17 @@ class TaskRepository {
   }
 
   Future<int> update(Task task) async {
+    final deadline = DateTime.tryParse(task.deadline);
+    if (deadline != null &&
+        task.status != TaskStatus.overdue &&
+        task.status != TaskStatus.done) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final day = DateTime(deadline.year, deadline.month, deadline.day);
+      if (day.isBefore(today)) {
+        throw StateError('Deadline không được ở quá khứ (BR-02).');
+      }
+    }
     final database = await _db.database;
     final map = task.toMap()..remove('id');
     return database.update(
@@ -114,7 +134,7 @@ class TaskRepository {
     return null;
   }
 
-  /// Mark past-deadline incomplete tasks as overdue.
+  /// Mark past-deadline incomplete tasks as overdue (BR-01).
   Future<int> syncOverdue(int userId) async {
     final database = await _db.database;
     final now = DateTime.now().toIso8601String();

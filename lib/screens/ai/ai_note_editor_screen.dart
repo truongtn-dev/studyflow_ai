@@ -170,9 +170,14 @@ class _AiNoteEditorScreenState extends State<AiNoteEditorScreen> {
                       alignLabelWithHint: true,
                       prefixIcon: Icon(Icons.notes_rounded),
                     ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Nội dung không được trống'
-                        : null,
+                    validator: (v) {
+                      final text = v?.trim() ?? '';
+                      if (text.isEmpty) return 'Nội dung không được trống';
+                      if (text.length < 10) {
+                        return 'Nội dung cần ít nhất 10 ký tự';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int?>(

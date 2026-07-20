@@ -31,6 +31,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
   bool _finished = false;
   int _correctCount = 0;
   int _totalReviewed = 0;
+  /// Cards promoted to mastered in this session (BR-10 may demote).
+  final List<Flashcard> _sessionPromoted = [];
+  bool _br10Demoted = false;
 
   @override
   void initState() {
@@ -68,9 +71,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
     if (card == null || card.id == null) return;
     final userId = context.read<AuthProvider>().userId;
 
+    final wasMastered = card.mastered;
     final updated = _srs.applyReview(card, correct: correct);
     await _repo.update(updated);
     await _repo.logReview(flashcardId: card.id!, correct: correct);
+    if (!wasMastered && updated.mastered) {
+      _sessionPromoted.add(updated);
+    }
     if (!mounted) return;
 
     final done = _index + 1 >= _due.length;
@@ -86,7 +93,17 @@ class _ReviewScreenState extends State<ReviewScreen> {
     });
 
     if (done && userId != null) {
+      // BR-10: quiz/session accuracy < 60% → do not keep card promotions.
+      final accuracy =
+          _totalReviewed == 0 ? 0.0 : _correctCount / _totalReviewed;
+      if (accuracy < 0.6 && _sessionPromoted.isNotEmpty) {
+        for (final promoted in _sessionPromoted) {
+          await _repo.update(promoted.copyWith(mastered: false));
+        }
+        _br10Demoted = true;
+      }
       await _achievements.evaluate(userId);
+      if (mounted) setState(() {});
     }
   }
 
@@ -131,7 +148,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
                       : 'Hoàn thành ôn tập!',
                   subtitle: _totalReviewed == 0
                       ? 'Quay lại sau khi có thẻ cần ôn.'
-                      : 'Đúng $_correctCount / $_totalReviewed thẻ.',
+                      : _br10Demoted
+                          ? 'Đúng $_correctCount / $_totalReviewed '
+                              '(<60%) — thẻ chưa được promote (BR-10).'
+                          : 'Đúng $_correctCount / $_totalReviewed thẻ.',
                   icon: _totalReviewed == 0
                       ? Icons.inbox_outlined
                       : Icons.emoji_events_outlined,

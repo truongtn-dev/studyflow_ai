@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/app_notification.dart';
 import '../providers/auth_provider.dart';
+import '../repositories/notification_repository.dart';
+import '../repositories/task_repository.dart';
 import '../services/achievement_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/constants.dart';
@@ -36,6 +39,17 @@ class _SplashScreenState extends State<SplashScreen> {
     }
     if (auth.userId != null) {
       await AchievementService().applyStreakDecay(auth.userId!);
+      final overdue = await TaskRepository().syncOverdue(auth.userId!);
+      if (overdue > 0) {
+        await NotificationRepository().insert(
+          AppNotification(
+            userId: auth.userId!,
+            title: 'Task quá hạn',
+            body: 'Có $overdue task vừa chuyển sang quá hạn.',
+            type: 'deadline',
+          ),
+        );
+      }
       await auth.refreshUser();
     }
     if (!mounted) return;

@@ -407,11 +407,20 @@ class _AiNoteDetailScreenState extends State<AiNoteDetailScreen> {
 
   Future<void> _summarize() async {
     if (_note == null || _busy) return;
+    final content = _note!.content.trim();
+    if (content.length < 30) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nội dung cần ≥30 ký tự để AI rút gọn.'),
+        ),
+      );
+      return;
+    }
     setState(() => _busy = true);
     final ai = context.read<AiProvider>();
     final summary = await ai.summarizeAiNote(
       title: _note!.title,
-      content: _note!.content,
+      content: content,
     );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -464,11 +473,20 @@ class _AiNoteDetailScreenState extends State<AiNoteDetailScreen> {
 
   Future<void> _startQuiz() async {
     if (_note == null || _busy) return;
+    final content = _note!.content.trim();
+    if (content.length < 50) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nội dung cần ≥50 ký tự để tạo quiz AI.'),
+        ),
+      );
+      return;
+    }
     setState(() => _busy = true);
     final ai = context.read<AiProvider>();
     final questions = await ai.quizFromAiNote(
       title: _note!.title,
-      content: _note!.content,
+      content: content,
     );
     if (!mounted) return;
     setState(() => _busy = false);

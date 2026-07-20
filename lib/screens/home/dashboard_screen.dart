@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/app_notification.dart';
 import '../../models/task.dart';
 import '../../providers/auth_provider.dart';
 import '../../repositories/notification_repository.dart';
@@ -53,6 +54,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     setState(() => _loading = true);
+    final overdue = await _tasks.syncOverdue(userId);
+    if (overdue > 0) {
+      await _notifications.insert(
+        AppNotification(
+          userId: userId,
+          title: 'Task quá hạn',
+          body: 'Có $overdue task vừa chuyển sang quá hạn.',
+          type: 'deadline',
+        ),
+      );
+    }
     final tasks = await _tasks.getByUserId(userId);
     final minutes = await _sessions.totalMinutesToday(userId);
     final unread = await _notifications.unreadCount(userId);

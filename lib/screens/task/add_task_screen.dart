@@ -76,6 +76,20 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       return;
     }
 
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
+    if (day.isBefore(today)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Deadline không được ở quá khứ (BR-02).')),
+      );
+      return;
+    }
+
     final newTask = Task(
       userId: widget.userId,
       courseId: _selectedCourse!.id,
@@ -87,8 +101,15 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       progress: _progress,
     );
 
-    await TaskRepository().insert(newTask);
-    if (mounted) Navigator.pop(context, true);
+    try {
+      await TaskRepository().insert(newTask);
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('StateError: ', ''))),
+      );
+    }
   }
 
   @override
