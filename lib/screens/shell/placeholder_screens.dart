@@ -30,6 +30,15 @@ class FocusTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userId = context.watch<AuthProvider>().userId;
+    if (userId == null) {
+      return const Scaffold(
+        body: EmptyState(
+          title: 'Vui lòng đăng nhập',
+          icon: Icons.lock_outline,
+        ),
+      );
+    }
     return const pomodoro.PomodoroScreen();
   }
 }

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/app_notification.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../repositories/notification_repository.dart';
+import '../../repositories/task_repository.dart';
 import '../../services/achievement_service.dart';
 import '../../theme/app_colors.dart';
 import '../shell/main_shell.dart';
@@ -57,6 +60,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
       await context.read<AiProvider>().setUserSession(user.id!);
+      final overdue = await TaskRepository().syncOverdue(user.id!);
+      if (overdue > 0) {
+        await NotificationRepository().insert(
+          AppNotification(
+            userId: user.id!,
+            title: 'Task quá hạn',
+            body: 'Có $overdue task vừa chuyển sang quá hạn.',
+            type: 'deadline',
+          ),
+        );
+      }
       await AchievementService().evaluate(user.id!);
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(

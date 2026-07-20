@@ -69,17 +69,14 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   Future<void> _pickDeadline() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final deadlineDay =
-        DateTime(_deadline.year, _deadline.month, _deadline.day);
-    final firstDate = deadlineDay.isBefore(today) ? deadlineDay : today;
-    var initial = deadlineDay;
-    if (initial.isBefore(firstDate)) initial = firstDate;
-    if (initial.isAfter(DateTime(2100))) initial = DateTime(2100);
+    // BR-02: when changing deadline, only allow today or future.
+    var initial = DateTime(_deadline.year, _deadline.month, _deadline.day);
+    if (initial.isBefore(today)) initial = today;
 
     final date = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: firstDate,
+      firstDate: today,
       lastDate: DateTime(2100),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
@@ -119,6 +116,18 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       }
     }
 
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(_deadline.year, _deadline.month, _deadline.day);
+    if (day.isBefore(today) &&
+        status != TaskStatus.overdue &&
+        status != TaskStatus.done) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Deadline không được ở quá khứ (BR-02).')),
+      );
+      return;
+    }
+
     final updatedTask = widget.task.copyWith(
       title: _titleController.text.trim(),
       description: _descController.text.trim(),
@@ -129,11 +138,18 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       courseId: _selectedCourse?.id,
     );
 
-    await TaskRepository().update(updatedTask);
-    if (status == TaskStatus.done) {
-      await AchievementService().evaluate(widget.task.userId);
+    try {
+      await TaskRepository().update(updatedTask);
+      if (status == TaskStatus.done) {
+        await AchievementService().evaluate(widget.task.userId);
+      }
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('StateError: ', ''))),
+      );
     }
-    if (mounted) Navigator.pop(context, true);
   }
 
   @override

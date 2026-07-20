@@ -63,35 +63,37 @@ class AchievementService {
     return unlocked;
   }
 
-  /// Reset streak if user missed yesterday (and has no session today yet).
+  DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  String _dayKey(DateTime day) =>
+      '${day.year.toString().padLeft(4, '0')}-'
+      '${day.month.toString().padLeft(2, '0')}-'
+      '${day.day.toString().padLeft(2, '0')}';
+
+  /// BR-05: reset streak if last study day is before yesterday.
   Future<User?> applyStreakDecay(int userId) async {
     final user = await _users.findById(userId);
     if (user == null || user.streak == 0) return user;
 
     final sessions = await _sessions.getByUserId(userId);
     if (sessions.isEmpty) {
-      if (user.streak > 0) {
-        final cleared = user.copyWith(streak: 0);
-        await _users.update(cleared);
-        return cleared;
-      }
-      return user;
+      final cleared = user.copyWith(streak: 0);
+      await _users.update(cleared);
+      return cleared;
     }
 
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    DateTime? lastStudy;
+    for (final s in sessions) {
+      final parsed = DateTime.tryParse(s.startedAt);
+      if (parsed == null) continue;
+      final day = _dayOnly(parsed);
+      if (lastStudy == null || day.isAfter(lastStudy)) lastStudy = day;
+    }
+
+    final today = _dayOnly(DateTime.now());
     final yesterday = today.subtract(const Duration(days: 1));
 
-    bool hasDay(DateTime day) {
-      final key =
-          '${day.year.toString().padLeft(4, '0')}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-      return sessions.any((s) => s.startedAt.startsWith(key));
-    }
-
-    final studiedToday = hasDay(today);
-    final studiedYesterday = hasDay(yesterday);
-
-    if (!studiedToday && !studiedYesterday && user.streak > 0) {
+    if (lastStudy == null || lastStudy.isBefore(yesterday)) {
       final cleared = user.copyWith(streak: 0);
       await _users.update(cleared);
       return cleared;
@@ -105,17 +107,26 @@ class AchievementService {
     if (user == null) return null;
 
     final sessions = await _sessions.getByUserId(userId);
-    final today = DateTime.now();
-    final todayKey =
-        '${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final today = _dayOnly(DateTime.now());
+    final yesterday = today.subtract(const Duration(days: 1));
+    final todayKey = _dayKey(today);
+    final yesterdayKey = _dayKey(yesterday);
+
     final sessionsToday =
         sessions.where((s) => s.startedAt.startsWith(todayKey)).length;
+    final studiedYesterday =
+        sessions.any((s) => s.startedAt.startsWith(yesterdayKey));
 
-    // First session of the day: streak = previous+1 (or 1 if was 0 after decay).
-    final streakBump = sessionsToday <= 1 ? 1 : 0;
+    // First session today: continue streak if studied yesterday, else start at 1.
+    var nextStreak = user.streak;
+    if (sessionsToday <= 1) {
+      nextStreak = studiedYesterday ? user.streak + 1 : 1;
+      if (nextStreak < 1) nextStreak = 1;
+    }
+
     final updated = user.copyWith(
       xp: user.xp + xpGain,
-      streak: user.streak + streakBump,
+      streak: nextStreak,
     );
     await _users.update(updated);
     await evaluate(userId);

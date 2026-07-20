@@ -129,7 +129,12 @@ class AiProvider extends ChangeNotifier {
     _remainingQuota = await _quota.getRemaining(_userId!);
   }
 
-  Future<bool> _canUseAi({bool requireStudyData = false}) async {
+  /// Returns false if session/API key/study-data invalid.
+  /// [allowCachedOnly] — when quota is 0, still return true so callers may serve cache.
+  Future<bool> _canUseAi({
+    bool requireStudyData = false,
+    bool allowCachedOnly = true,
+  }) async {
     if (_userId == null) {
       _error = 'Vui lòng đăng nhập để dùng AI.';
       notifyListeners();
@@ -140,13 +145,6 @@ class AiProvider extends ChangeNotifier {
     if (!_groq.hasApiKey) {
       _error =
           'Chưa cấu hình GROQ_KEY. Vào AI Hub → AI Quota để dán key (console.groq.com/keys).';
-      notifyListeners();
-      return false;
-    }
-
-    if (!await _quota.canRequest(uid)) {
-      _error =
-          'Đã hết ${AppConstants.maxAiRequestsPerDay} lượt AI hôm nay. Xem lại lịch sử offline.';
       notifyListeners();
       return false;
     }
@@ -163,7 +161,25 @@ class AiProvider extends ChangeNotifier {
       }
     }
 
+    final canLive = await _quota.canRequest(uid);
+    if (!canLive && !allowCachedOnly) {
+      _error =
+          'Đã hết ${AppConstants.maxAiRequestsPerDay} lượt AI hôm nay. Xem lại lịch sử offline.';
+      notifyListeners();
+      return false;
+    }
+
     return true;
+  }
+
+  Future<bool> _ensureLiveQuota() async {
+    final uid = _userId;
+    if (uid == null) return false;
+    if (await _quota.canRequest(uid)) return true;
+    _error =
+        'Đã hết ${AppConstants.maxAiRequestsPerDay} lượt AI hôm nay. Thử lại câu hỏi đã hỏi (cache) hoặc xem Lịch sử AI.';
+    notifyListeners();
+    return false;
   }
 
   Future<void> sendChat(String text) async {
@@ -189,6 +205,7 @@ class AiProvider extends ChangeNotifier {
       if (cached != null) {
         reply = cached.response;
       } else {
+        if (!await _ensureLiveQuota()) return;
         reply = await _groq.chat(_buildChatPrompt(trimmed));
         await _saveCache(uid, AiPromptType.chat.value, hash, reply);
         await _quota.increment(uid);
@@ -229,6 +246,7 @@ class AiProvider extends ChangeNotifier {
       if (cached != null) {
         _studyPlanResult = cached.response;
       } else {
+        if (!await _ensureLiveQuota()) return;
         _studyPlanResult = await _groq.generateStudyPlan(courses: courses, tasks: tasks);
         await _saveCache(uid, AiPromptType.studyPlan.value, hash, _studyPlanResult!);
         await _quota.increment(uid);
@@ -264,6 +282,7 @@ class AiProvider extends ChangeNotifier {
       if (cached != null) {
         _explainResult = cached.response;
       } else {
+        if (!await _ensureLiveQuota()) return;
         _explainResult = await _groq.explainConcept(trimmed);
         await _saveCache(uid, AiPromptType.explain.value, hash, _explainResult!);
         await _quota.increment(uid);
@@ -304,6 +323,7 @@ class AiProvider extends ChangeNotifier {
       if (cached != null) {
         result = cached.response;
       } else {
+        if (!await _ensureLiveQuota()) return null;
         result = await _groq.summarizeNote(title: title, content: content);
         await _saveCache(
           uid,
@@ -351,6 +371,7 @@ class AiProvider extends ChangeNotifier {
       if (cached != null) {
         raw = cached.response;
       } else {
+        if (!await _ensureLiveQuota()) return null;
         raw = await _groq.generateNoteQuizRaw(title: title, content: content);
         await _saveCache(uid, AiPromptType.noteQuiz.value, hash, raw);
         await _quota.increment(uid);
@@ -396,6 +417,7 @@ class AiProvider extends ChangeNotifier {
       if (cached != null) {
         summary = cached.response;
       } else {
+        if (!await _ensureLiveQuota()) return;
         summary = await _groq.summarizeWebPage(
           url: page.url,
           pageText: page.text,

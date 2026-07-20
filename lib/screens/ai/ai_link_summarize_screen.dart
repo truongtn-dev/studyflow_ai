@@ -44,7 +44,21 @@ class _AiLinkSummarizeScreenState extends State<AiLinkSummarizeScreen> {
 
   Future<void> _run(AiProvider ai) async {
     FocusScope.of(context).unfocus();
-    await ai.summarizeLink(_controller.text);
+    final raw = _controller.text.trim();
+    if (raw.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng dán URL cần tóm tắt.')),
+      );
+      return;
+    }
+    final uri = Uri.tryParse(raw.startsWith('http') ? raw : 'https://$raw');
+    if (uri == null || uri.host.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('URL không hợp lệ.')),
+      );
+      return;
+    }
+    await ai.summarizeLink(raw);
   }
 
   @override
